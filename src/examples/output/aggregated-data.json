@@ -1,10 +1,29 @@
 [
   {
+    "Rating": "A",
     "AccountCount": 2,
-    "MaxBalance": 0,
-    "MinBalance": 0,
-    "AvgBalance": 0,
-    "SumBalance": 0,
-    "AvgCreditLimit": 0
+    "MaxBalance": 8000,
+    "MinBalance": 1200,
+    "AvgBalance": 4600,
+    "SumBalance": 9200,
+    "AvgCreditLimit": 7500
+  },
+  {
+    "Rating": "B",
+    "AccountCount": 2,
+    "MaxBalance": 6000,
+    "MinBalance": 2500,
+    "AvgBalance": 4250,
+    "SumBalance": 8500,
+    "AvgCreditLimit": 4750
+  },
+  {
+    "Rating": "C",
+    "AccountCount": 1,
+    "MaxBalance": -100,
+    "MinBalance": -100,
+    "AvgBalance": -100,
+    "SumBalance": -100,
+    "AvgCreditLimit": 3000
   }
 ]

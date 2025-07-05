@@ -3,7 +3,7 @@ import { JsonWriter } from '@/writers/json-writer';
 import { IsNotNull, IsType, PatternMatch, ValueMatch } from '@/filters/field-filters';
 import { FilterExpression } from '@/filters/filter-expressions';
 import { Job } from '@/core/job';
-import { ValidatingReader } from '@/validators/validating-reader';
+import { ValidatingReader } from '@/transformers/validating-reader';
 
 async function runExample() {
   // --- Validate Incoming Data Example ---

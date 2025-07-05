@@ -2,7 +2,7 @@ import { CSVReader } from '@/readers/csv-reader';
 import { TransformingReader } from '@/transformers/transforming-reader';
 import { RemoveFields, SetCalculatedField } from '@/transformers/field-transformers';
 import { Job } from '@/core/job';
-import { RemoveDuplicatesReader } from '@/deduplicators/remove-duplicates-reader';
+import { RemoveDuplicatesReader } from '@/transformers/remove-duplicates-reader';
 import { ConsoleWriter } from '@/writers/console-writer';
 
 async function runExample() {

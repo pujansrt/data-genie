@@ -60,82 +60,9 @@ npm run build
 
 ## 📚 How to use
 
-### Example to read a CSV file, filter data, and write to JSON:
 
 ```ts
-import { CSVReader } from '@/readers/csv-reader';
-import { JsonWriter } from '@/writers/json-writer';
-import { FilteringReader } from '@/filters/filtering-reader';
-import { FieldFilter, IsNotNull, IsType, PatternMatch, ValueMatch } from '@/filters/field-filters';
-import { FilterExpression } from '@/filters/filter-expressions';
-import { Job } from '@/core/job';
-
-async function runExample() {
-    const reader = new CSVReader('input/example.csv').setFieldNamesInFirstRow(true);
-
-    const filteringReader = new FilteringReader(reader)
-        .add(new FieldFilter('Rating').addRule(IsNotNull()).addRule(IsType('string')).addRule(ValueMatch('B', 'C')).createRecordFilter())
-        .add(new FieldFilter('Account').addRule(IsNotNull()).addRule(IsType('string')).addRule(PatternMatch('[0-9]*')).createRecordFilter())
-        .add(
-            new FilterExpression(
-                'record.CreditLimit !== undefined && record.Balance !== undefined && parseFloat(record.CreditLimit) >= 0 && parseFloat(record.CreditLimit) <= 5000 && parseFloat(record.Balance) <= parseFloat(record.CreditLimit)'
-            ).createRecordFilter()
-        );
-
-    await Job.run(filteringReader, new ConsoleWriter());
-    // OR
-    await Job.run(filteringReader, new JsonWriter('output/filtered-data.json'));
-}
-runExample().catch(console.error);
-```
-
-### Example to read a JSON file, transform data, and write to JSON:
-
-```ts
-import { JsonWriter } from '@/writers/json-writer';
-import { TransformingReader } from '@/transformers/transforming-reader';
-import { SetCalculatedField } from '@/transformers/field-transformers';
-import { Job } from '@/core/job';
-import { JsonReader } from '@/readers/json-reader';
-
-async function runExample() {
-  let reader: any = new JsonReader('input/simple-json-input.json');
-
-    reader = new TransformingReader(reader)
-    .setCondition((record) => record.balance < 0)
-    .add(new SetCalculatedField('balance', '0.0').transform()); // Using SetCalculatedField for dynamic value
-
-  await Job.run(reader, new JsonWriter());
-}
-runExample().catch(console.error);
-```
-
-### FixedWidth Example
-
-```ts
-import { Job } from '@/core/job';
-import { FixedWidthReader } from '@/readers/fixed-width-reader';
-import { ConsoleWriter } from '@/writers/console-writer';
-
-async function runExample() {
-  let reader: any = new FixedWidthReader('input/credit-balance-01.fw');
-  reader.setFieldWidths(8, 16, 16, 12, 14, 16, 7);
-  reader.setFieldNamesInFirstRow(true);
-
-  await Job.run(reader, new ConsoleWriter());
-}
-runExample().catch(console.error);
-```
-
-### Transform, Deduplicate and Fields Manipulation Example
-
-```ts
-import { CSVReader } from '@/readers/csv-reader';
-import { TransformingReader } from '@/transformers/transforming-reader';
-import { RemoveFields, SetCalculatedField } from '@/transformers/field-transformers';
-import { Job } from '@/core/job';
-import { RemoveDuplicatesReader } from '@/deduplicators/remove-duplicates-reader';
-import { ConsoleWriter } from '@/writers/console-writer';
+import { ConsoleWriter, CSVReader, Job, SetCalculatedField, TransformingReader, RemoveDuplicatesReader, RemoveFields } from '@pujansrt/data-genie';
 
 async function runExample() {
   let reader: any = new CSVReader('input/credit-balance-01.csv').setFieldNamesInFirstRow(true);
@@ -145,6 +72,82 @@ async function runExample() {
     .add(new RemoveFields('CreditLimit', 'Balance').transform());
 
   await Job.run(reader, new ConsoleWriter());
+}
+
+runExample().catch(console.error);
+```
+
+
+### Example to read a CSV file, filter data, and write to JSON:
+
+```ts
+import { ConsoleWriter, CSVReader, FieldFilter, FilterExpression, FilteringReader, IsNotNull, IsType, Job, PatternMatch, ValueMatch } from "@pujansrt/data-genie";
+
+async function runExample() {
+  const reader = new CSVReader('input/example.csv').setFieldNamesInFirstRow(true);
+
+  const filteringReader = new FilteringReader(reader)
+    .add(new FieldFilter('Rating').addRule(IsNotNull()).addRule(IsType('string')).addRule(ValueMatch('B', 'C')).createRecordFilter())
+    .add(new FieldFilter('Account').addRule(IsNotNull()).addRule(IsType('string')).addRule(PatternMatch('[0-9]*')).createRecordFilter())
+    .add(
+      new FilterExpression(
+        'record.CreditLimit !== undefined && record.Balance !== undefined && parseFloat(record.CreditLimit) >= 0 && parseFloat(record.CreditLimit) <= 5000 && parseFloat(record.Balance) <= parseFloat(record.CreditLimit)'
+      ).createRecordFilter()
+    );
+
+  await Job.run(filteringReader, new ConsoleWriter());
+  // OR
+  // await Job.run(filteringReader, new JsonWriter('output/filtered-data.json'));
+}
+runExample().catch(console.error);
+```
+
+### Example to read a JSON file and transform data
+
+```ts
+import {ConsoleWriter, Job, JsonReader, SetCalculatedField, TransformingReader} from "@pujansrt/data-genie";
+
+async function runExample() {
+    let reader: any = new JsonReader('input/simple-json-input.json');
+
+    reader = new TransformingReader(reader)
+        .setCondition((record) => record.balance < 0)
+        .add(new SetCalculatedField('balance', '0.0').transform()); // Using SetCalculatedField for dynamic value
+
+    await Job.run(reader, new ConsoleWriter());
+    // await Job.run(filteringReader, new JsonWriter('output/filtered-data.json'));
+}
+runExample().catch(console.error);
+```
+
+### FixedWidth Example
+
+```ts
+import {ConsoleWriter, FixedWidthReader, Job} from "@pujansrt/data-genie";
+
+async function runExample() {
+    let reader: any = new FixedWidthReader('input/credit-balance-01.fw');
+    reader.setFieldWidths(8, 16, 16, 12, 14, 16, 7);
+    reader.setFieldNamesInFirstRow(true);
+
+    await Job.run(reader, new ConsoleWriter());
+}
+runExample().catch(console.error);
+```
+
+### Transform, Deduplicate and Fields Manipulation Example
+
+```ts
+import {ConsoleWriter, CSVReader, Job, RemoveDuplicatesReader, RemoveFields, SetCalculatedField, TransformingReader} from "@pujansrt/data-genie";
+
+async function runExample() {
+    let reader: any = new CSVReader('input/credit-balance-01.csv').setFieldNamesInFirstRow(true);
+    reader = new RemoveDuplicatesReader(reader, 'Rating', 'CreditLimit');
+    reader = new TransformingReader(reader)
+        .add(new SetCalculatedField('AvailableCredit', 'parseFloat(record.CreditLimit) - parseFloat(record.Balance)').transform())
+        .add(new RemoveFields('CreditLimit', 'Balance').transform());
+
+    await Job.run(reader, new ConsoleWriter());
 }
 
 runExample().catch(console.error);

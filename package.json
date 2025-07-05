@@ -1,6 +1,6 @@
 {
   "name": "@pujansrt/data-genie",
-  "version": "1.0.0",
+  "version": "1.0.4",
   "keywords": [
     "typescript",
     "etl",
@@ -20,9 +20,11 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "build": "tsc",
     "test": "jest",
-    "dev": "tsc -w"
+    "dev": "tsc -w",
+    "build": "npm run clean && tsc -p . && npm run resolve-aliases",
+    "clean": "rm -rf dist",
+    "resolve-aliases": "tsc-alias -p tsconfig.json"
   },
   "repository": {
     "type": "git",
@@ -38,6 +40,7 @@
     "jest-coverage-badges": "^1.1.2",
     "prettier": "^3.6.2",
     "ts-jest": "^29.4.0",
+    "tsc-alias": "^1.8.16",
     "tsup": "^8.5.0"
   },
   "jest": {

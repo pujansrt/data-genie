@@ -30,16 +30,36 @@ export class FieldFilter {
 
 // Individual field rules
 export const IsNotNull = (): FieldFilterRule => (value: any) => value !== null && value !== undefined;
+
 export const IsType =
   (type: string): FieldFilterRule =>
   (value: any) =>
     typeof value === type;
+
 export const ValueMatch =
   <T>(...allowedValues: T[]): FieldFilterRule =>
   (value: T) =>
     allowedValues.includes(value);
+
 export const PatternMatch =
   (pattern: string): FieldFilterRule =>
   (value: string) =>
     new RegExp(pattern).test(value);
 // Add other rules: GreaterThan, LessThan, Between, etc.
+
+export const GreaterThan =
+  (threshold: number): FieldFilterRule =>
+  (value: number) =>
+    typeof value === 'number' && value > threshold;
+
+export const LessThan =
+  (threshold: number): FieldFilterRule =>
+  (value: number) =>
+    typeof value === 'number' && value < threshold;
+
+export const Between =
+  (min: number, max: number): FieldFilterRule =>
+  (value: number) =>
+    typeof value === 'number' && value >= min && value <= max;
+
+export const IsEmpty = (): FieldFilterRule => (value: any) => value === null || value === undefined || value === '';
