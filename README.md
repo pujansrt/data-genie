@@ -53,7 +53,9 @@ import { ConsoleWriter, CSVReader, Job, SetCalculatedField, TransformingReader, 
 
 async function runExample() {
   let reader: any = new CSVReader('input/credit-balance-01.csv').setFieldNamesInFirstRow(true);
+  
   reader = new RemoveDuplicatesReader(reader, 'Rating', 'CreditLimit');
+  
   reader = new TransformingReader(reader)
     .add(new SetCalculatedField('AvailableCredit', 'parseFloat(record.CreditLimit) - parseFloat(record.Balance)').transform())
     .add(new RemoveFields('CreditLimit', 'Balance').transform());
@@ -128,7 +130,9 @@ import {ConsoleWriter, CSVReader, Job, RemoveDuplicatesReader, RemoveFields, Set
 
 async function runExample() {
     let reader: any = new CSVReader('input/credit-balance-01.csv').setFieldNamesInFirstRow(true);
+    
     reader = new RemoveDuplicatesReader(reader, 'Rating', 'CreditLimit');
+    
     reader = new TransformingReader(reader)
         .add(new SetCalculatedField('AvailableCredit', 'parseFloat(record.CreditLimit) - parseFloat(record.Balance)').transform())
         .add(new RemoveFields('CreditLimit', 'Balance').transform());
