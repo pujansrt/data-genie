@@ -1,0 +1,37 @@
+[
+  {
+    "Account": "1001",
+    "Name": "John Doe",
+    "CreditLimit": "5000",
+    "Balance": "1200",
+    "Rating": "A"
+  },
+  {
+    "Account": "1002",
+    "Name": "Jane Smith",
+    "CreditLimit": "7500",
+    "Balance": "6000",
+    "Rating": "B"
+  },
+  {
+    "Account": "1003",
+    "Name": "Peter Jones",
+    "CreditLimit": "3000",
+    "Balance": "-100",
+    "Rating": "C"
+  },
+  {
+    "Account": "1004",
+    "Name": "Alice Brown",
+    "CreditLimit": "10000",
+    "Balance": "8000",
+    "Rating": "A"
+  },
+  {
+    "Account": "1005",
+    "Name": "Bob White",
+    "CreditLimit": "2000",
+    "Balance": "2500",
+    "Rating": "B"
+  }
+]

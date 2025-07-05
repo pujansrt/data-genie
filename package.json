@@ -1,0 +1,66 @@
+{
+  "name": "@pujansrt/data-genie",
+  "version": "1.0.0",
+  "keywords": [
+    "typescript",
+    "etl",
+    "engine",
+    "data",
+    "processing",
+    "performance",
+    "pipeline",
+    "transformations",
+    "data-genie",
+    "data-engine",
+    "data-pipeline",
+    "data-transformation"
+  ],
+  "license": "MIT",
+  "description": "High performant ETL engine written in TypeScript",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": "jest",
+    "dev": "tsc -w"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/pujansrt/data-genie.git"
+  },
+  "author": "pujansrt",
+  "devDependencies": {
+    "@types/jest": "^30.0.0",
+    "eslint": "^9.30.0",
+    "eslint-config-prettier": "^10.1.5",
+    "eslint-plugin-prettier": "^5.5.1",
+    "jest": "^30.0.3",
+    "jest-coverage-badges": "^1.1.2",
+    "prettier": "^3.6.2",
+    "ts-jest": "^29.4.0",
+    "tsup": "^8.5.0"
+  },
+  "jest": {
+    "preset": "ts-jest",
+    "testEnvironment": "node",
+    "roots": [
+      "<rootDir>/tests"
+    ],
+    "moduleFileExtensions": [
+      "ts",
+      "js"
+    ],
+    "moduleNameMapper": {
+      "^@/(.*)$": "<rootDir>/src/$1"
+    }
+  },
+  "files": [
+    "dist",
+    "LICENSE"
+  ],
+  "dependencies": {
+    "csv-parse": "^5.6.0",
+    "csv-stringify": "^6.5.2",
+    "tslib": "^2.8.1"
+  }
+}

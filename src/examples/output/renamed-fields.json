@@ -1,0 +1,32 @@
+[
+  {
+    "Account": "1001",
+    "Name": "John Doe",
+    "CreditLimit": "1200",
+    "Rating": "A"
+  },
+  {
+    "Account": "1002",
+    "Name": "Jane Smith",
+    "CreditLimit": "6000",
+    "Rating": "B"
+  },
+  {
+    "Account": "1003",
+    "Name": "Peter Jones",
+    "CreditLimit": "-100",
+    "Rating": "C"
+  },
+  {
+    "Account": "1004",
+    "Name": "Alice Brown",
+    "CreditLimit": "8000",
+    "Rating": "A"
+  },
+  {
+    "Account": "1005",
+    "Name": "Bob White",
+    "CreditLimit": "2500",
+    "Rating": "B"
+  }
+]

@@ -1,0 +1,9 @@
+[
+  {
+    "Account": "1003",
+    "Name": "Peter Jones",
+    "CreditLimit": "3000",
+    "Balance": "-100",
+    "Rating": "C"
+  }
+]

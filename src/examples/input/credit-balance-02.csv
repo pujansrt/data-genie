@@ -1,0 +1,11 @@
+Account,Name,CreditLimit,Balance,Rating
+1001,John Doe,5000,1200,A
+1002,Jane Smith,4000,3000,B
+1003,Peter Jones,3000,1000,C
+1004,Alice Brown,6000,500,B
+1005,Bob White,2000,2500,C
+1006,Charlie Day,4500,4500,B
+1007,Dennis Reynolds,3000,3500,C
+1008,Dee Reynolds,null,1000,B
+1009,Frank Reynolds,,500,C
+1010,Artemis Kelly,500,200,A

@@ -1,0 +1,19 @@
+import { CSVReader } from '@/readers/csv-reader';
+import { TransformingReader } from '@/transformers/transforming-reader';
+import { RemoveFields, SetCalculatedField } from '@/transformers/field-transformers';
+import { Job } from '@/core/job';
+import { RemoveDuplicatesReader } from '@/deduplicators/remove-duplicates-reader';
+import { ConsoleWriter } from '@/writers/console-writer';
+
+async function runExample() {
+  let reader: any = new CSVReader('input/credit-balance-01.csv').setFieldNamesInFirstRow(true);
+  reader = new RemoveDuplicatesReader(reader, 'Rating', 'CreditLimit');
+  reader = new TransformingReader(reader)
+    .add(new SetCalculatedField('AvailableCredit', 'parseFloat(record.CreditLimit) - parseFloat(record.Balance)').transform())
+    .add(new RemoveFields('CreditLimit', 'Balance').transform());
+
+  // await Job.run(reader, new JsonWriter('output/db-write-simulated.json'));
+  await Job.run(reader, new ConsoleWriter());
+}
+
+runExample().catch(console.error);
