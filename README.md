@@ -1,6 +1,5 @@
 # Data-Genie
-
-A lightweight and efficient **ETL Engine** in **TypeScript**, suitable for ETL Operations.
+A lightweight and efficient **ETL Engine** in **TypeScript**, suitable for various operations.
 
 ## 📦 Features
 
@@ -8,26 +7,13 @@ A lightweight and efficient **ETL Engine** in **TypeScript**, suitable for ETL O
 - ✍️ Write to multiple formats (JSON, CSV, Console, etc.)
 - ✂️ Filter and transform data with powerful field filters
 - 📊 Supports complex filtering expressions
-- 🔗 Chainable operations for flexible data processing
-- ⚡ High performance with efficient data handling
+- 🔗 Chainable nd high performance operations for flexible data processing
 - 🔍 Supports data validation and transformation
 - 📈 Ideal for data cleaning, migration, and analysis
 - 🧩 Modular design for easy integration into existing projects
-- 🧪 Easy to use with TypeScript and JavaScript
+- 🧪 Easy to use with TypeScript/JavaScript/Browser
 - 🔒 Secure and reliable with TypeScript's type safety
-- 🌐 Works seamlessly in Node.js and browser environments
-- 📖 Includes comprehensive examples and use cases
-- 🔧 Easy to install and get started
-
-## 🧪 Use Cases
-
-- Data cleaning and transformation
-- Data validation and filtering
-- Data migration and ETL processes
-- Data analysis and reporting
-- Data integration from multiple sources
-
----
+- 🔧 Easy to install and get started (with examples)
 
 ## 🚀 Getting Started
 
@@ -60,6 +46,7 @@ npm run build
 
 ## 📚 How to use
 
+### Example to read a CSV file, filter data, and write to console
 
 ```ts
 import { ConsoleWriter, CSVReader, Job, SetCalculatedField, TransformingReader, RemoveDuplicatesReader, RemoveFields } from '@pujansrt/data-genie';
@@ -72,6 +59,8 @@ async function runExample() {
     .add(new RemoveFields('CreditLimit', 'Balance').transform());
 
   await Job.run(reader, new ConsoleWriter());
+  // await Job.run(filteringReader, new JsonWriter('output/filtered-data.json'));
+  // await Job.run(filteringReader, new CsvWriter('output/filtered-data.csv'));
 }
 
 runExample().catch(console.error);
@@ -96,8 +85,6 @@ async function runExample() {
     );
 
   await Job.run(filteringReader, new ConsoleWriter());
-  // OR
-  // await Job.run(filteringReader, new JsonWriter('output/filtered-data.json'));
 }
 runExample().catch(console.error);
 ```
@@ -115,7 +102,6 @@ async function runExample() {
         .add(new SetCalculatedField('balance', '0.0').transform()); // Using SetCalculatedField for dynamic value
 
     await Job.run(reader, new ConsoleWriter());
-    // await Job.run(filteringReader, new JsonWriter('output/filtered-data.json'));
 }
 runExample().catch(console.error);
 ```
@@ -154,6 +140,14 @@ runExample().catch(console.error);
 ```
 
 ---
+## 🧪 Use Cases
+
+- Data cleaning and transformation
+- Data validation and filtering
+- Data migration and ETL processes
+- Data analysis and reporting
+- Data integration from multiple sources
+
 
 ## 🤝 Contributing
 Contributions are welcome! Please open an issue or submit a pull request.
