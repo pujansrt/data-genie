@@ -10,21 +10,14 @@ A lightweight and efficient **ETL Engine** in **TypeScript**, suitable for ETL O
 - 📊 Supports complex filtering expressions
 - 🔗 Chainable operations for flexible data processing
 - ⚡ High performance with efficient data handling
-- 🧪 Easy to use with TypeScript and JavaScript
-- 📚 Comprehensive documentation and examples
-- 👨‍💻 Actively maintained by a seasoned developer
 - 🔍 Supports data validation and transformation
 - 📈 Ideal for data cleaning, migration, and analysis
-- 🛠️ Extensible architecture for custom readers, writers, and filters
 - 🧩 Modular design for easy integration into existing projects
+- 🧪 Easy to use with TypeScript and JavaScript
 - 🔒 Secure and reliable with TypeScript's type safety
 - 🌐 Works seamlessly in Node.js and browser environments
-- 📦 Lightweight with no external dependencies
-- 🧪 Includes built-in readers and writers for common formats
 - 📖 Includes comprehensive examples and use cases
 - 🔧 Easy to install and get started
-- 🛠️ Supports custom field filters and expressions
-- 🔗 Integrates with existing data pipelines
 
 ## 🧪 Use Cases
 
@@ -77,20 +70,23 @@ import { FieldFilter, IsNotNull, IsType, PatternMatch, ValueMatch } from '@/filt
 import { FilterExpression } from '@/filters/filter-expressions';
 import { Job } from '@/core/job';
 
-const reader = new CSVReader('input/example.csv').setFieldNamesInFirstRow(true);
+async function runExample() {
+    const reader = new CSVReader('input/example.csv').setFieldNamesInFirstRow(true);
 
-const filteringReader = new FilteringReader(reader)
-    .add(new FieldFilter('Rating').addRule(IsNotNull()).addRule(IsType('string')).addRule(ValueMatch('B', 'C')).createRecordFilter())
-    .add(new FieldFilter('Account').addRule(IsNotNull()).addRule(IsType('string')).addRule(PatternMatch('[0-9]*')).createRecordFilter())
-    .add(
-        new FilterExpression(
-            'record.CreditLimit !== undefined && record.Balance !== undefined && parseFloat(record.CreditLimit) >= 0 && parseFloat(record.CreditLimit) <= 5000 && parseFloat(record.Balance) <= parseFloat(record.CreditLimit)'
-        ).createRecordFilter()
-    );
+    const filteringReader = new FilteringReader(reader)
+        .add(new FieldFilter('Rating').addRule(IsNotNull()).addRule(IsType('string')).addRule(ValueMatch('B', 'C')).createRecordFilter())
+        .add(new FieldFilter('Account').addRule(IsNotNull()).addRule(IsType('string')).addRule(PatternMatch('[0-9]*')).createRecordFilter())
+        .add(
+            new FilterExpression(
+                'record.CreditLimit !== undefined && record.Balance !== undefined && parseFloat(record.CreditLimit) >= 0 && parseFloat(record.CreditLimit) <= 5000 && parseFloat(record.Balance) <= parseFloat(record.CreditLimit)'
+            ).createRecordFilter()
+        );
 
-await Job.run(filteringReader, new ConsoleWriter());
-// OR
-await Job.run(filteringReader, new JsonWriter('output/filtered-data.json'));
+    await Job.run(filteringReader, new ConsoleWriter());
+    // OR
+    await Job.run(filteringReader, new JsonWriter('output/filtered-data.json'));
+}
+runExample().catch(console.error);
 ```
 
 ### Example to read a JSON file, transform data, and write to JSON:
