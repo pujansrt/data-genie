@@ -3,8 +3,8 @@ A lightweight and efficient **ETL Engine** in **TypeScript**, suitable for vario
 
 ## 📦 Features
 
-- 🔄 Read from various data sources (CSV, JSON, FixedWidth, etc.)
-- ✍️ Write to multiple formats (JSON, CSV, Console, etc.)
+- 🔄 Read from various data sources (CSV, TSV, JSON, NDJSON, FixedWidth, etc.)
+- ✍️ Write to multiple formats (JSON, NDJSON, CSV, TSV, FixedWidth, SQL, Console, etc.)
 - ✂️ Filter and transform data with powerful field filters
 - 📊 Supports complex filtering expressions
 - 🔗 Chainable nd high performance operations for flexible data processing
@@ -153,6 +153,11 @@ runExample().catch(console.error);
 ```
 
 ---
+## Upcoming Features
+- Support for Apache Avro
+- Support for Apache Parquet
+- 🔗 Enhanced data validation rules
+
 ## 🧪 Use Cases
 
 - Data cleaning and transformation
