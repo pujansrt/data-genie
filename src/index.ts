@@ -1,10 +1,16 @@
 export { CSVReader } from './readers/csv-reader';
 export { FixedWidthReader } from './readers/fixed-width-reader';
 export { JsonReader } from './readers/json-reader';
+export { TSVReader } from './readers/tsv-reader';
+export { NDJsonReader } from './readers/nd-json-reader';
 
 export { CSVWriter } from './writers/csv-writer';
 export { ConsoleWriter } from './writers/console-writer';
 export { JsonWriter } from './writers/json-writer';
+export { FixedWidthWriter } from './writers/fixed-width-writer';
+export { TSVWriter } from './writers/tsv-writer';
+export { NDJsonWriter } from './writers/nd-json-writer';
+export { SQLWriter } from './writers/sql-writer';
 
 export { GroupByReader } from './transformers/group-by-reader';
 export { TransformingReader } from './transformers/transforming-reader';
