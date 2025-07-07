@@ -22,9 +22,6 @@ graph TD
         DataGenie --> sql_w[SQL Database]
         DataGenie --> console_w[Console Output]
     end
-style DataGenie fill:#add8e6,stroke:#333,stroke-width:2px,color:#000
-    linkStyle 0,1,2,3,4,5 stroke:#28a745,stroke-width:2px,stroke-dasharray: 5 5
-    linkStyle 6,7,8,9,10,11,12 stroke:#007bff,stroke-width:2px
 ```    
 
 ## 📦 Features
