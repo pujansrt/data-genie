@@ -1,6 +1,32 @@
 # Data-Genie
 A lightweight and efficient **ETL Engine** in **TypeScript**, suitable for various operations.
 
+```mermaid
+graph TD
+    subgraph InputSources
+        csv_r[CSV File] --> DataGenie
+        tsv_r[TSV File] --> DataGenie
+        json_r[JSON File] --> DataGenie
+        ndjson_r[NDJSON File] --> DataGenie
+        fw_r[Fixed-Width File] --> DataGenie
+    end
+
+    DataGenie((Data-Genie Library))
+
+    subgraph OutputDestinations
+        DataGenie --> json_w[JSON File]
+        DataGenie --> ndjson_w[NDJSON File]
+        DataGenie --> csv_w[CSV File]
+        DataGenie --> tsv_w[TSV File]
+        DataGenie --> fw_w[Fixed-Width File]
+        DataGenie --> sql_w[SQL Database]
+        DataGenie --> console_w[Console Output]
+    end
+style DataGenie fill:#add8e6,stroke:#333,stroke-width:2px,color:#000
+    linkStyle 0,1,2,3,4,5 stroke:#28a745,stroke-width:2px,stroke-dasharray: 5 5
+    linkStyle 6,7,8,9,10,11,12 stroke:#007bff,stroke-width:2px
+```    
+
 ## 📦 Features
 
 - 🔄 Read from various data sources (CSV, TSV, JSON, NDJSON, FixedWidth, etc.)
