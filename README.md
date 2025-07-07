@@ -63,9 +63,18 @@ async function runExample() {
   await Job.run(reader, new ConsoleWriter());
   // await Job.run(filteringReader, new JsonWriter('output/filtered-data.json'));
   // await Job.run(filteringReader, new CsvWriter('output/filtered-data.csv'));
+  // await Job.run(filteringReader, new FixedWidthWriter('output/filtered-data.fw').setFieldNamesInFirstRow(true).setFieldWidths(10, 15, 10, 15));
 }
 
 runExample().catch(console.error);
+```
+
+### Writing to Fixed Width File
+
+```ts
+const fwWriter = new FixedWidthWriter('output/ex-simulated.fw').setFieldNamesInFirstRow(true).setFieldWidths(10, 15, 10, 15);
+
+await Job.run(reader, fwWriter);
 ```
 
 

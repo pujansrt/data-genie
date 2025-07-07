@@ -3,7 +3,7 @@ import { TransformingReader } from '@/transformers/transforming-reader';
 import { RemoveFields, SetCalculatedField } from '@/transformers/field-transformers';
 import { Job } from '@/core/job';
 import { RemoveDuplicatesReader } from '@/transformers/remove-duplicates-reader';
-import { ConsoleWriter } from '@/writers/console-writer';
+import { FixedWidthWriter } from '@/writers/fixed-width-writer';
 
 async function runExample() {
   let reader: any = new CSVReader('input/credit-balance-01.csv').setFieldNamesInFirstRow(true);
@@ -12,8 +12,9 @@ async function runExample() {
     .add(new SetCalculatedField('AvailableCredit', 'parseFloat(record.CreditLimit) - parseFloat(record.Balance)').transform())
     .add(new RemoveFields('CreditLimit', 'Balance').transform());
 
-  // await Job.run(reader, new JsonWriter('output/db-write-simulated.json'));
-  await Job.run(reader, new ConsoleWriter());
+  const fwWriter = new FixedWidthWriter('output/ex-simulated.fw').setFieldNamesInFirstRow(true).setFieldWidths(10, 15, 10, 15);
+
+  await Job.run(reader, fwWriter);
 }
 
 runExample().catch(console.error);
