@@ -1,6 +1,16 @@
 # Data-Genie
 A high-performant, streaming-first **ETL Engine** in **TypeScript**, designed for reliability, scalability, and ease of use.
 
+[![NPM Version](https://img.shields.io/npm/v/@pujansrt/data-genie.svg?style=flat-square)](https://www.npmjs.com/package/@pujansrt/data-genie)
+[![NPM Downloads](https://img.shields.io/npm/dm/@pujansrt/data-genie.svg?style=flat-square)](https://www.npmjs.com/package/@pujansrt/data-genie)
+[![Build Status](https://img.shields.io/github/actions/workflow/status/pujansrt/data-genie/publish.yml?branch=production&style=flat-square&label=build)](https://github.com/pujansrt/data-genie/actions)
+[![TypeScript](https://img.shields.io/badge/TypeScript-6.0-blue.svg?style=flat-square)](https://www.typescriptlang.org/)
+[![Node.js Support](https://img.shields.io/badge/Node.js-Next-green.svg?style=flat-square)](https://nodejs.org/)
+[![Bundle Size](https://img.shields.io/bundlephobia/min/@pujansrt/data-genie?style=flat-square)](https://bundlephobia.com/package/@pujansrt/data-genie)
+[![License](https://img.shields.io/npm/l/@pujansrt/data-genie.svg?style=flat-square)](https://github.com/pujansrt/data-genie/blob/main/LICENSE)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square)](http://makeapullrequest.com)
+![Coverage lines](./badges/badge-lines.svg) ![Coverage functions](./badges/badge-functions.svg)
+
 ```mermaid
 %%{init: { 'theme': 'base', 'themeVariables': { 'primaryColor': '#E8F4F8', 'actorBkg': '#D2E4F9', 'edgeLabelBackground':'#ffffff', 'noteBkgColor': '#FDF2D4', 'noteBorderColor': '#F1C40F'}}}%%
 
@@ -92,7 +102,8 @@ graph TD
 ```bash
 npm install @pujansrt/data-genie zod
 ```
-Zod is optional if you want to
+
+> **Note:** `zod` is an optional peer dependency. It is only required if you intend to use the `SchemaValidatingReader`.
 ---
 
 ## Advanced Examples

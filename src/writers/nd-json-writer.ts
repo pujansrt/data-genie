@@ -28,6 +28,15 @@ export class NDJsonWriter implements DataWriter {
   }
 
   /**
+   * Sets options for the NDJsonWriter.
+   * @param options Configuration options.
+   * @returns The current NDJsonWriter instance for chaining.
+   */
+  public setOptions(options: any): this {
+    return this;
+  }
+
+  /**
    * Writes a single data record to the NDJSON file.
    * The record is stringified into a JSON object and appended with a newline.
    * @param record The DataRecord object to write.

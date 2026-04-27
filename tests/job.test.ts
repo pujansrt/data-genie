@@ -1,7 +1,43 @@
-import { Job } from '@/core/job';
+import { Job, ConsoleLogger } from '@/core/job';
+import { ConsoleWriter } from '@/writers/console-writer';
 import { DataReader, DataWriter, DataRecord, Logger } from '@/core/interfaces';
 
 describe('Job', () => {
+  it('should cover ConsoleLogger methods', () => {
+    const logger = new ConsoleLogger();
+    const spyLog = jest.spyOn(console, 'log').mockImplementation();
+    const spyWarn = jest.spyOn(console, 'warn').mockImplementation();
+    const spyError = jest.spyOn(console, 'error').mockImplementation();
+    const spyDebug = jest.spyOn(console, 'debug').mockImplementation();
+
+    logger.info('test');
+    logger.warn('test');
+    logger.error('test');
+    logger.debug('test');
+
+    expect(spyLog).toHaveBeenCalled();
+    expect(spyWarn).toHaveBeenCalled();
+    expect(spyError).toHaveBeenCalled();
+    expect(spyDebug).toHaveBeenCalled();
+
+    spyLog.mockRestore();
+    spyWarn.mockRestore();
+    spyError.mockRestore();
+    spyDebug.mockRestore();
+  });
+
+  it('should cover ConsoleWriter', async () => {
+    const writer = new ConsoleWriter();
+    const spyLog = jest.spyOn(console, 'log').mockImplementation();
+
+    await writer.write({ a: 1 });
+    await writer.writeAll((async function*() { yield { b: 2 }; })());
+    await writer.close();
+
+    expect(spyLog).toHaveBeenCalledTimes(3);
+    spyLog.mockRestore();
+  });
+
   it('should return correct metrics and use custom logger', async () => {
     const mockRecords = [{ id: 1 }, { id: 2 }];
     

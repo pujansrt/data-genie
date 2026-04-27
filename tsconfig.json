@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
-    "target": "ES2020",
-    "module": "Node16",
+    "target": "ES2022",
+    "module": "NodeNext",
     "rootDir": "./",
     "declaration": true,
     "declarationDir": "dist",
@@ -10,8 +10,9 @@
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true,
-    "moduleResolution": "node16",
+    "moduleResolution": "NodeNext",
     "resolveJsonModule": true,
+    "isolatedModules": true,
     "types": ["jest", "node"],
     "paths": {
       "@/*": ["./src/*"]

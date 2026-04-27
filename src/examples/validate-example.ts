@@ -41,7 +41,6 @@ async function runExample() {
         isValid = false;
       }
       if (!PatternMatch('[0-9]*')(record.Account)) {
-        // Your Java example had [0-7]*, matching [0-9]* here
         messages.push({ record, field: 'Account', message: 'Account must contain only digits.' });
         isValid = false;
       }

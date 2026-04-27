@@ -40,4 +40,26 @@ describe('SchemaValidatingReader', () => {
     expect(mockDlqWriter.write).toHaveBeenCalledTimes(1);
     expect(mockDlqWriter.close).toHaveBeenCalled();
   });
+
+  it('should handle schema validation failure without DLQ', async () => {
+    const mockReader: DataReader = {
+      read: async function* () {
+        yield { id: 2, email: 'invalid' };
+      }
+    };
+    const mockSchema = {
+      parse: () => { throw new Error('Invalid'); }
+    };
+    const validatingReader = new SchemaValidatingReader(mockReader, mockSchema);
+    const spy = jest.spyOn(console, 'warn').mockImplementation();
+    
+    const results = [];
+    for await (const record of validatingReader.read()) {
+      results.push(record);
+    }
+    
+    expect(results).toHaveLength(0);
+    expect(spy).toHaveBeenCalled();
+    spy.mockRestore();
+  });
 });

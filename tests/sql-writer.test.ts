@@ -29,6 +29,14 @@ describe('SQLWriter', () => {
     expect(lastCall[1]).toEqual([1, 'Alice', 2, 'Bob']);
   });
 
+  it('should allow explicitly setting field names', async () => {
+    const writer = new SQLWriter(mockDb, 'users').setFieldNames('id', 'name');
+    await writer.write({ id: 1, name: 'Alice', extra: 'ignored' });
+    await writer.close();
+    
+    expect(mockDb.query.mock.calls[0][1]).toEqual([1, 'Alice']);
+  });
+
   it('should handle transactions correctly', async () => {
     const writer = new SQLWriter(mockDb, 'users')
       .setBatchSize(1)

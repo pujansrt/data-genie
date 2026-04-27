@@ -19,6 +19,15 @@ export class NDJsonReader implements DataReader {
   }
 
   /**
+   * Sets options for the NDJsonReader.
+   * @param options Configuration options.
+   * @returns The current NDJsonReader instance for chaining.
+   */
+  public setOptions(options: any): this {
+    return this;
+  }
+
+  /**
    * Reads data records from the NDJSON file asynchronously, yielding each record as it's parsed.
    * @returns An AsyncIterableIterator of DataRecord objects.
    */

@@ -30,10 +30,10 @@ export {
   PatternMatch,
   Between,
   GreaterThan,
-  FieldFilterRule,
   LessThan,
   IsEmpty
 } from './filters/field-filters';
+export type { FieldFilterRule } from './filters/field-filters';
 export { FilterExpression } from './filters/filter-expressions';
 
 export { Job, ConsoleLogger } from './core/job';

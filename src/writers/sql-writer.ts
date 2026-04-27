@@ -40,6 +40,18 @@ export class SQLWriter implements DataWriter {
   }
 
   /**
+   * Sets the names of the fields. These names correspond to the column names in the database table
+   * and define the order of data extraction from `DataRecord` objects.
+   * @param names A list of string names for the fields (column names).
+   * @returns The current SQLWriter instance for chaining.
+   */
+  public setFieldNames(...names: string[]): this {
+    this.fieldNames = names;
+    this.initializedFieldNames = true; // Field names are explicitly set
+    return this;
+  }
+
+  /**
    * Enables or disables the use of transactions for the entire job.
    * Only works if the provided dbClient implements beginTransaction, commit, and rollback.
    */

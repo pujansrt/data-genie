@@ -3,7 +3,7 @@ name: Publish to NPM
 on:
   push:
     branches:
-      - production  # Adjust this to your main branch name if different
+      - production
 
 jobs:
   build:
@@ -30,5 +30,4 @@ jobs:
         run: npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        # This will only succeed if the version in package.json hasn't been published yet
-        continue-on-error: true 
+        continue-on-error: true
