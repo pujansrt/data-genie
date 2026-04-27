@@ -4,79 +4,59 @@ A high-performant, streaming-first **ETL Engine** in **TypeScript**, designed fo
 [![NPM Version](https://img.shields.io/npm/v/@pujansrt/data-genie.svg?style=flat-square)](https://www.npmjs.com/package/@pujansrt/data-genie)
 [![NPM Downloads](https://img.shields.io/npm/dm/@pujansrt/data-genie.svg?style=flat-square)](https://www.npmjs.com/package/@pujansrt/data-genie)
 [![Build Status](https://img.shields.io/github/actions/workflow/status/pujansrt/data-genie/publish.yml?branch=production&style=flat-square&label=build)](https://github.com/pujansrt/data-genie/actions)
+[![NPM Bundle Size](https://img.shields.io/bundlephobia/minzip/@pujansrt/data-genie?style=flat-square)](https://bundlephobia.com/package/@pujansrt/data-genie)
 [![TypeScript](https://img.shields.io/badge/TypeScript-6.0-blue.svg?style=flat-square)](https://www.typescriptlang.org/)
 [![Node.js Support](https://img.shields.io/badge/Node.js-Next-green.svg?style=flat-square)](https://nodejs.org/)
 [![License](https://img.shields.io/npm/l/@pujansrt/data-genie.svg?style=flat-square)](https://github.com/pujansrt/data-genie/blob/main/LICENSE)
-![Coverage lines](./badges/badge-lines.svg) ![Coverage functions](./badges/badge-functions.svg) ![Coverage branches](./badges/badge-branches.svg) 
+[![Coverage](https://img.shields.io/badge/coverage-91%25-brightgreen.svg?style=flat-square)](https://github.com/pujansrt/data-genie)
 
 ```mermaid
-%%{init: { 'theme': 'base', 'themeVariables': { 'primaryColor': '#E8F4F8', 'actorBkg': '#D2E4F9', 'edgeLabelBackground':'#ffffff', 'noteBkgColor': '#FDF2D4', 'noteBorderColor': '#F1C40F'}}}%%
-
 graph TD
-    %% Data Sources
-    subgraph Inputs [Data Sources]
+    subgraph Sources [Data Sources]
         direction TB
-        I1[CSV / TSV / Excel / Parquet]
-        I2[JSON / NDJSON]
-        I3[SQL Database]
-        I4[API / REST]
-        I5[AWS S3]
-        I6[Memory / Array]
-        I7[Custom Reader]
+        S1[CSV / TSV / FixedWidth]
+        S2[JSON / NDJSON]
+        S3[Parquet / Excel]
+        S4[SQL DB]
+        S5[AWS S3 / API]
     end
 
-    %% The Engine Core
-    subgraph Core [Data-Genie ETL Engine]
+    subgraph Engine [Data-Genie Core]
         direction TB
-        
-        subgraph Pipeline [Processing Pipeline]
-            direction LR
-            F[Filtering] --> T[Transform]
-            T --> V[Validation]
-            V -.-> DLQ((Dead Letter Queue))
+        R[DataReader]
+        subgraph Pipeline [Stream Pipeline]
+            T[Transform / Filter]
+            V[Validate]
+            C[Custom Function]
+            A[Aggregate]
         end
-
-        subgraph OutputDist [Output Strategy]
-            direction TB
-            V --> Choice{Select Writer}
-            Choice -- Single --- DW[Direct Writer]
-            Choice -- Multi --- MW[MultiWriter]
-        end
-
-        Reliability[Retries / Circuit Breaker / SQL Batching]
-        Metrics([Metrics])
+        W[DataWriter]
     end
 
-    %% Data Sinks
-    subgraph Outputs [Data Sinks]
+    subgraph Sinks [Data Sinks]
         direction TB
-        O1[(SQL Database)]
-        O2[Files: JSON/CSV/FW/Excel/Parquet]
-        O3[AWS S3]
-        O4[Memory / Array]
-        O5[Console / Logger]
+        D1[CSV / TSV / FixedWidth]
+        D2[JSON / NDJSON]
+        D3[Parquet / Excel]
+        D4[SQL DB]
+        D5[AWS S3]
+        D6[Console]
+        D7[Memory]
     end
 
-    %% Main Flow
-    Inputs ==> Core
-    DW ==> Outputs
-    MW -- Parallel Fan-out --- Outputs
+    Sources --> R
+    R --> Pipeline
+    Pipeline --> W
+    W --> Sinks
 
-    %% Color Theme & Styling
-    style Core fill:#f3e5f5,stroke:#4a148c,stroke-width:2px,color:#4a148c
-    style Pipeline fill:#ffffff,stroke:#7b1fa2,stroke-dasharray: 5 5
-    style Reliability fill:#ffffff,stroke:#c62828,stroke-dasharray: 5 5
-    
-    classDef source fill:#e1f5fe,stroke:#01579b,color:#01579b
-    classDef sink fill:#e8f5e9,stroke:#2e7d32,color:#1b5e20
-    classDef feature fill:#fff3e0,stroke:#ef6c00,color:#e65100,font-style:italic
-    
-    class I1,I2,I3,I4,I5,I6,I7 source
-    class O1,O2,O3,O4,O5 sink
-    class Metrics feature
+    style Engine fill:#ffe5f5,stroke:#7b1fa2,stroke-width:2px,color:#000
+    style Sources fill:#e1f5fe,stroke:#0277bd,stroke-width:2px,color:#000
+    style Sinks fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px,color:#000
+    style Pipeline fill:#ffffff,stroke:#666,stroke-dasharray: 5 5,color:#000
+
 ```
 
-## Core Mandates & Best Practices
+## Core Mandates
 
 *   **Streaming-First Architecture:** Uses `AsyncIterableIterator` to ensure a constant memory footprint (~15MB), regardless of data size.
 *   **Backpressure Aware:** Writers respect stream drains, preventing memory spikes during slow disk/network I/O.
@@ -87,7 +67,7 @@ graph TD
 
 ---
 
-## The Streaming Advantage (Proof of Scalability)
+## The Streaming Advantage
 
 Most ETL tools fail when processing files larger than the available RAM. Data-Genie ensures a **Constant Memory Footprint (O(1))**.
 
@@ -213,4 +193,4 @@ const pipeline = new TransformingReader(new CSVReader('users.csv'))
 - **Reporting:** Generating massive Excel or CSV reports from live APIs/DBs.
 
 ## License
-MIT License — free for personal and commercial use.
+MIT License - free for personal and commercial use.
