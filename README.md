@@ -31,7 +31,7 @@ A high-performant, streaming-first **ETL Engine** in **TypeScript**, designed fo
 ```bash
 npm install @pujansrt/data-genie zod
 ```
-
+Zod is optional if you want to
 ---
 
 ## Advanced Examples
