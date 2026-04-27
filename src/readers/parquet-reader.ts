@@ -1,8 +1,6 @@
 import { DataReader, DataRecord, DataSource } from '@/core/interfaces';
 import { ensureDataSource } from '@/core/transport-utils';
 import { FileSource } from '@/core/file-transport';
-// @ts-ignore
-import * as parquet from 'parquetjs-lite';
 
 /**
  * ParquetReader reads data from Parquet files.
@@ -12,15 +10,17 @@ export class ParquetReader implements DataReader {
   private source: DataSource;
 
   constructor(source: string | DataSource) {
-    try {
-      require.resolve('parquetjs-lite');
-    } catch (e) {
-      throw new Error("The 'parquetjs-lite' package is required to use ParquetReader.");
-    }
     this.source = ensureDataSource(source);
   }
 
   public async *read(): AsyncIterableIterator<DataRecord> {
+    let parquet;
+    try {
+      parquet = await import('parquetjs-lite');
+    } catch (e) {
+      throw new Error("The 'parquetjs-lite' package is required to use ParquetReader. Please install it with 'npm install parquetjs-lite'.");
+    }
+
     // Parquetjs-lite needs a filename or a specialized reader
     if (!(this.source instanceof FileSource)) {
         throw new Error('ParquetReader currently only supports FileSource. Stream-based Parquet reading is coming soon.');

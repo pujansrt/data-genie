@@ -1,5 +1,4 @@
 import { DataReader, DataRecord, DataSource } from '@/core/interfaces';
-import * as ExcelJS from 'exceljs';
 import { ensureDataSource } from '@/core/transport-utils';
 import { FileSource } from '@/core/file-transport';
 
@@ -14,11 +13,6 @@ export class XlsxReader implements DataReader {
   private options: XlsxReaderOptions;
 
   constructor(source: string | DataSource, options: XlsxReaderOptions = {}) {
-    try {
-      require.resolve('exceljs');
-    } catch (e) {
-      throw new Error("The 'exceljs' package is required to use XlsxReader.");
-    }
     this.source = ensureDataSource(source);
     this.options = {
       sheetIndex: 1,
@@ -28,6 +22,13 @@ export class XlsxReader implements DataReader {
   }
 
   public async *read(): AsyncIterableIterator<DataRecord> {
+    let ExcelJS;
+    try {
+      ExcelJS = await import('exceljs');
+    } catch (e) {
+      throw new Error("The 'exceljs' package is required to use XlsxReader. Please install it with 'npm install exceljs'.");
+    }
+
     const workbook = new ExcelJS.Workbook();
     let stream;
     

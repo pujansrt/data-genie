@@ -1,5 +1,4 @@
 import { DataWriter, DataRecord, DataSink } from '@/core/interfaces';
-import * as ExcelJS from 'exceljs';
 import { ensureDataSink } from '@/core/transport-utils';
 import { FileSink } from '@/core/file-transport';
 
@@ -20,12 +19,6 @@ export class XlsxWriter implements DataWriter {
   private sink: DataSink;
 
   constructor(sink: string | DataSink, options: XlsxWriterOptions = {}) {
-    try {
-      require.resolve('exceljs');
-    } catch (e) {
-      throw new Error("The 'exceljs' package is required to use XlsxWriter.");
-    }
-    
     this.sink = ensureDataSink(sink);
     this.options = {
       sheetName: 'Sheet1',
@@ -36,6 +29,13 @@ export class XlsxWriter implements DataWriter {
 
   private async initialize(): Promise<void> {
     if (this.workbookWriter) return;
+
+    let ExcelJS;
+    try {
+      ExcelJS = await import('exceljs');
+    } catch (e) {
+      throw new Error("The 'exceljs' package is required to use XlsxWriter. Please install it with 'npm install exceljs'.");
+    }
 
     const config: any = { useStyles: this.options.useStyles };
     if (this.sink instanceof FileSink) {

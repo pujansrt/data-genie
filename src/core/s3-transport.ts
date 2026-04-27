@@ -1,13 +1,12 @@
 import { DataSource, DataSink } from './interfaces';
 import { Readable, Writable, PassThrough } from 'stream';
 import type { S3Client } from '@aws-sdk/client-s3';
-import { GetObjectCommand } from '@aws-sdk/client-s3';
-import { Upload } from '@aws-sdk/lib-storage';
 
 export class S3Source implements DataSource {
   constructor(private client: S3Client, private bucket: string, private key: string) {}
 
   public async getStream(): Promise<Readable> {
+    const { GetObjectCommand } = await import('@aws-sdk/client-s3');
     const response = await this.client.send(new GetObjectCommand({
       Bucket: this.bucket,
       Key: this.key
@@ -25,32 +24,53 @@ export class S3Source implements DataSource {
 
 export class S3Sink implements DataSink {
   private passThrough = new PassThrough();
-  private upload: Upload;
+  private upload: any;
+  private uploadPromise: Promise<any> | null = null;
 
-  constructor(client: S3Client, bucket: string, key: string, contentType = 'application/octet-stream') {
+  constructor(
+    private client: S3Client, 
+    private bucket: string, 
+    private key: string, 
+    private contentType = 'application/octet-stream'
+  ) {}
+
+  private async initialize(): Promise<void> {
+    if (this.uploadPromise) return;
+
+    let Upload;
+    try {
+      ({ Upload } = await import('@aws-sdk/lib-storage'));
+    } catch (e) {
+      throw new Error("The '@aws-sdk/lib-storage' package is required to use S3Sink. Please install it with 'npm install @aws-sdk/lib-storage'.");
+    }
+
     this.upload = new Upload({
-      client,
+      client: this.client,
       params: {
-        Bucket: bucket,
-        Key: key,
+        Bucket: this.bucket,
+        Key: this.key,
         Body: this.passThrough,
-        ContentType: contentType
+        ContentType: this.contentType
       }
     });
+
+    this.uploadPromise = this.upload.done();
+    this.uploadPromise?.catch(console.error);
   }
 
   public async getStream(): Promise<Writable> {
-    // Start upload in background
-    this.upload.done().catch(console.error);
+    await this.initialize();
     return this.passThrough;
   }
 
   public async finalize(): Promise<void> {
     this.passThrough.end();
-    await this.upload.done();
+    if (this.uploadPromise) {
+      await this.uploadPromise;
+    }
   }
 
   public name(): string {
-    return `s3://upload`;
+    return `s3://${this.bucket}/${this.key}`;
   }
 }
