@@ -18,6 +18,7 @@ export { SQLWriter } from './writers/sql-writer';
 export { RetryingWriter } from './writers/retrying-writer';
 export { S3CSVWriter } from './writers/s3-csv-writer';
 export { S3JsonWriter } from './writers/s3-json-writer';
+export { MultiWriter } from './writers/multi-writer';
 
 export { GroupByReader } from './transformers/group-by-reader';
 export { TransformingReader } from './transformers/transforming-reader';
