@@ -25,8 +25,16 @@ export class HttpSource implements DataSource {
       throw new Error(`HttpSource: ${this.url} returned no body`);
     }
 
-    // Convert Web ReadableStream to Node.js Readable
-    return Readable.fromWeb(response.body as any);
+    // Handle both Node.js fetch (body is a stream) and standard Web fetch
+    if (response.body && typeof (response.body as any)[Symbol.asyncIterator] === 'function') {
+        return Readable.from(response.body as any);
+    }
+
+    if (response.body && (response.body as any).getReader) {
+        return Readable.fromWeb(response.body as any);
+    }
+    
+    throw new Error('HttpSource: Fetch response body is not a stream.');
   }
 
   public name(): string {

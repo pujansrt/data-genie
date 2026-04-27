@@ -8,6 +8,9 @@ export interface XlsxWriterOptions {
   useStyles?: boolean;
 }
 
+/**
+ * XlsxWriter writes data records to an Excel file using a streaming approach.
+ */
 export class XlsxWriter implements DataWriter {
   private workbookWriter: any;
   private worksheet: any;
@@ -29,14 +32,16 @@ export class XlsxWriter implements DataWriter {
       useStyles: false,
       ...options
     };
+  }
 
-    // ExcelJS streaming writer needs a filename or a stream
-    // For now, we assume FileSink or we could get the stream
+  private async initialize(): Promise<void> {
+    if (this.workbookWriter) return;
+
     const config: any = { useStyles: this.options.useStyles };
     if (this.sink instanceof FileSink) {
         config.filename = (this.sink as any).filePath;
     } else {
-        // Fallback or potentially get stream (ExcelJS supports stream)
+        config.stream = await this.sink.getStream();
     }
 
     this.workbookWriter = new (ExcelJS as any).stream.xlsx.WorkbookWriter(config);
@@ -44,6 +49,8 @@ export class XlsxWriter implements DataWriter {
   }
 
   public async write(record: DataRecord): Promise<void> {
+    await this.initialize();
+
     if (!this.headerWritten) {
       this.fieldNames = Object.keys(record);
       this.worksheet.columns = this.fieldNames.map(name => ({ header: name, key: name }));
@@ -60,6 +67,11 @@ export class XlsxWriter implements DataWriter {
   }
 
   public async close(): Promise<void> {
-    await this.workbookWriter.commit();
+    if (this.workbookWriter) {
+      await this.workbookWriter.commit();
+      if ((this.sink as any).finalize) {
+        await (this.sink as any).finalize();
+      }
+    }
   }
 }

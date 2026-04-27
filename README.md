@@ -51,7 +51,7 @@ graph TD
     subgraph Outputs [Data Sinks]
         direction TB
         O1[(SQL Database)]
-        O2[Files: JSON/CSV/FW/Excel]
+        O2[Files: JSON/CSV/FW/Excel/Parquet]
         O3[AWS S3]
         O4[Memory / Array]
         O5[Console / Logger]
@@ -99,6 +99,18 @@ Most ETL tools fail when processing files larger than the available RAM. Data-Ge
 
 ---
 
+## Modern Architecture: Transport vs. Format
+
+Most ETL libraries suffer from "Class Explosion" (e.g., `S3CSVReader`, `LocalCSVReader`). Data-Genie solves this by decoupling **Where the data lives (Transport)** from **How it is structured (Format)**.
+
+### The Strategy Pattern
+By separating these concerns, every Format (CSV, JSON, Parquet) automatically works with every Transport (Local, S3, HTTP, Memory).
+
+*   **Format Readers/Writers:** Focus purely on parsing/stringifying data (CSV, JSON, Excel, Parquet).
+*   **Transports (Source/Sink):** Focus purely on byte-streams (File, S3, HTTP, Memory).
+
+---
+
 ## Installation
 
 ```bash
@@ -131,7 +143,7 @@ import { S3Source, S3Sink, CSVReader, JsonWriter, Job } from '@pujansrt/data-gen
 
 const s3Client = new S3Client({ region: 'us-east-1' });
 
-// Decoupled Transport: Use any format (CSV/JSON) with any source (S3/File)
+// Decoupled Transport: Combine any Source with any Format
 const source = new S3Source(s3Client, 'my-source-bucket', 'data.csv');
 const reader = new CSVReader(source);
 
@@ -153,7 +165,7 @@ const pipeline = new TransformingReader(reader)
 
 const multiWriter = new MultiWriter(
   new ConsoleWriter(),
-  new S3JsonWriter(s3Client, 'bucket', 'processed.json')
+  new JsonWriter(new FileSink('processed.json'))
 );
 
 await Job.run(pipeline, multiWriter);
@@ -164,50 +176,20 @@ await Job.run(pipeline, multiWriter);
 // Optional: npm install exceljs
 import { XlsxReader, XlsxWriter, Job } from '@pujansrt/data-genie';
 
-const reader = new XlsxReader('large_data.xlsx');
-const writer = new XlsxWriter('output.xlsx');
+const reader = new XlsxReader('large_data.xlsx'); // String path defaults to FileSource
+const writer = new XlsxWriter('output.xlsx');    // String path defaults to FileSink
 
 await Job.run(reader, writer);
 ```
 
-### 5. Parquet Support
+### 5. API Ingestion (HttpSource)
 ```ts
-// Optional: npm install parquetjs-lite
-import { ParquetReader, ParquetWriter, Job } from '@pujansrt/data-genie';
+import { HttpSource, JsonReader, Job } from '@pujansrt/data-genie';
 
-const schema = {
-  name: { type: 'UTF8' },
-  age: { type: 'INT64' }
-};
+const source = new HttpSource('https://api.example.com/data.json');
+const reader = new JsonReader(source);
 
-const reader = new ParquetReader('data.parquet');
-const writer = new ParquetWriter('output.parquet', schema);
-
-await Job.run(reader, writer);
-```
-
-### 6. API Ingestion with HttpReader
-```ts
-const apiReader = new HttpReader('https://api.example.com/data', {
-  nextPageUrl: (res) => res.pagination.next_page
-});
-
-await Job.run(apiReader, new JsonWriter('local_backup.json'));
-```
-
-### 6. Testing & Debugging (Memory Handlers)
-Use standard JavaScript arrays as sources or sinks for fast unit testing.
-
-```ts
-import { MemoryReader, MemoryWriter, Job } from '@pujansrt/data-genie';
-
-const data = [{ id: 1, name: 'Alice' }, { id: 2, name: 'Bob' }];
-const reader = new MemoryReader(data);
-const writer = new MemoryWriter();
-
-await Job.run(reader, writer);
-
-console.log(writer.getRecords()); // [{ id: 1, ... }, ...]
+await Job.run(reader, new JsonWriter('backup.json'));
 ```
 
 ---
@@ -219,21 +201,8 @@ Data-Genie provides a rich set of transformers to manipulate your data as it str
 Combine multiple fields using standard JavaScript functions.
 
 ```ts
-import { CSVReader, TransformingReader, MapFields, JsonWriter, Job } from '@pujansrt/data-genie';
-
 const pipeline = new TransformingReader(new CSVReader('users.csv'))
   .add(new MapFields('fullName', ['firstname', 'lastname'], (fn, ln) => `${fn} ${ln}`).transform());
-
-await Job.run(pipeline, new JsonWriter('output.json'));
-```
-
-### Calculated Fields
-Perform simple math or logic via strings (uses `eval` safely per record).
-
-```ts
-import { SetCalculatedField } from '@pujansrt/data-genie';
-
-pipeline.add(new SetCalculatedField('total', 'record.price * record.qty').transform());
 ```
 
 ---

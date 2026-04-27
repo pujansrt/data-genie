@@ -1,6 +1,7 @@
 import { DataReader, DataRecord, DataSource } from '@/core/interfaces';
-import { ensureDataSource } from '@/core/transport-utils';
 import * as ExcelJS from 'exceljs';
+import { ensureDataSource } from '@/core/transport-utils';
+import { FileSource } from '@/core/file-transport';
 
 export interface XlsxReaderOptions {
   sheetName?: string;
@@ -10,7 +11,6 @@ export interface XlsxReaderOptions {
 
 /**
  * XlsxReader reads data from Excel files using a streaming approach.
- * Highly memory efficient for large XLSX files.
  */
 export class XlsxReader implements DataReader {
   private source: DataSource;
@@ -20,7 +20,7 @@ export class XlsxReader implements DataReader {
     try {
       require.resolve('exceljs');
     } catch (e) {
-      throw new Error("The 'exceljs' package is required to use XlsxReader. Please install it with 'npm install exceljs'.");
+      throw new Error("The 'exceljs' package is required to use XlsxReader.");
     }
     this.source = ensureDataSource(source);
     this.options = {
@@ -31,20 +31,26 @@ export class XlsxReader implements DataReader {
   }
 
   public async *read(): AsyncIterableIterator<DataRecord> {
-    const stream = await this.source.getStream();
-    const workbookReader = new (ExcelJS as any).stream.xlsx.WorkbookReader(stream, {
-      worksheets: 'emit',
-    });
+    let workbookReader: any;
+
+    if (this.source instanceof FileSource) {
+      workbookReader = new (ExcelJS as any).stream.xlsx.WorkbookReader((this.source as any).filePath, {
+        worksheets: 'emit',
+      });
+    } else {
+      const stream = await this.source.getStream();
+      workbookReader = new (ExcelJS as any).stream.xlsx.WorkbookReader(stream, {
+        worksheets: 'emit',
+      });
+    }
 
     for await (const worksheetReader of workbookReader) {
-      // Check if this is the worksheet we want
       const isTargetSheet = this.options.sheetName 
         ? worksheetReader.name === this.options.sheetName 
         : worksheetReader.id === this.options.sheetIndex;
 
       if (!isTargetSheet) {
-        // Skip rows for other sheets
-        for await (const _ of worksheetReader) { /* consume */ }
+        for await (const _ of worksheetReader) { /* consume to skip */ }
         continue;
       }
 
@@ -53,12 +59,10 @@ export class XlsxReader implements DataReader {
 
       for await (const row of worksheetReader) {
         rowCount++;
-        
-        // Extract values (ExcelJS row.values is 1-indexed)
         const values = Array.isArray(row.values) ? row.values.slice(1) : [];
 
         if (rowCount === 1 && this.options.hasFieldNamesInFirstRow) {
-          fieldNames = values.map(v => String(v));
+          fieldNames = values.map((v: any) => String(v));
           continue;
         }
 
@@ -68,8 +72,7 @@ export class XlsxReader implements DataReader {
             record[name] = values[index];
           });
         } else {
-          // If no headers, use col1, col2, etc.
-          values.forEach((val, index) => {
+          values.forEach((val: any, index: number) => {
             record[`col${index + 1}`] = val;
           });
         }

@@ -1,6 +1,7 @@
 import { DataReader, DataRecord, DataSource } from '@/core/interfaces';
 import { ensureDataSource } from '@/core/transport-utils';
 import { FileSource } from '@/core/file-transport';
+// @ts-ignore
 import * as parquet from 'parquetjs-lite';
 
 /**
