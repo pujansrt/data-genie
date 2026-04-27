@@ -1,7 +1,65 @@
 # Data-Genie
 A high-performant, streaming-first **ETL Engine** in **TypeScript**, designed for reliability, scalability, and ease of use.
 
-![](./diagram.jpg)
+```mermaid
+graph LR
+    %% Data Sources
+    subgraph Inputs [Data Sources]
+        direction TB
+        I1[CSV / TSV]
+        I2[JSON / NDJSON]
+        I3[Fixed Width]
+        I4[Custom Reader]
+    end
+
+    %% The Engine Core
+    subgraph Core [Data-Genie ETL Engine]
+        direction TB
+        
+        subgraph Pipeline [The Pipeline]
+            direction LR
+            F[Filtering] --> T[Transform]
+            T --> V[Validation]
+            V -.-> DLQ((Dead Letter Queue))
+        end
+
+        subgraph Reliability [Reliability & Performance]
+            direction LR
+            R[Retries] --- C[Circuit Breaker]
+            C --- B[SQL Batching]
+        end
+
+        Metrics([Performance Metrics])
+        BP([Backpressure Awareness])
+    end
+
+    %% Data Sinks
+    subgraph Outputs [Data Sinks]
+        direction TB
+        O1[(SQL Database)]
+        O2[JSON / NDJSON]
+        O3[CSV / TSV]
+        O4[Fixed Width]
+        O5[Console / Logger]
+    end
+
+    %% Main Flow
+    Inputs ==> Core
+    Core ==> Outputs
+
+    %% Color Theme & Styling
+    style Core fill:#f3e5f5,stroke:#4a148c,stroke-width:2px,color:#4a148c
+    style Pipeline fill:#ffffff,stroke:#7b1fa2,stroke-dasharray: 5 5
+    style Reliability fill:#ffffff,stroke:#c62828,stroke-dasharray: 5 5
+    
+    classDef source fill:#e1f5fe,stroke:#01579b,color:#01579b
+    classDef sink fill:#e8f5e9,stroke:#2e7d32,color:#1b5e20
+    classDef feature fill:#fff3e0,stroke:#ef6c00,color:#e65100,font-style:italic
+    
+    class I1,I2,I3,I4 source
+    class O1,O2,O3,O4,O5 sink
+    class Metrics,BP feature
+```
 
 ## Core Mandates & Best Practices
 
