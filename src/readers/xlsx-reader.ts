@@ -1,4 +1,5 @@
-import { DataReader, DataRecord } from '@/core/interfaces';
+import { DataReader, DataRecord, DataSource } from '@/core/interfaces';
+import { ensureDataSource } from '@/core/transport-utils';
 import * as ExcelJS from 'exceljs';
 
 export interface XlsxReaderOptions {
@@ -12,16 +13,16 @@ export interface XlsxReaderOptions {
  * Highly memory efficient for large XLSX files.
  */
 export class XlsxReader implements DataReader {
-  private filePath: string;
+  private source: DataSource;
   private options: XlsxReaderOptions;
 
-  constructor(filePath: string, options: XlsxReaderOptions = {}) {
+  constructor(source: string | DataSource, options: XlsxReaderOptions = {}) {
     try {
       require.resolve('exceljs');
     } catch (e) {
       throw new Error("The 'exceljs' package is required to use XlsxReader. Please install it with 'npm install exceljs'.");
     }
-    this.filePath = filePath;
+    this.source = ensureDataSource(source);
     this.options = {
       sheetIndex: 1,
       hasFieldNamesInFirstRow: true,
@@ -30,7 +31,8 @@ export class XlsxReader implements DataReader {
   }
 
   public async *read(): AsyncIterableIterator<DataRecord> {
-    const workbookReader = new (ExcelJS as any).stream.xlsx.WorkbookReader(this.filePath, {
+    const stream = await this.source.getStream();
+    const workbookReader = new (ExcelJS as any).stream.xlsx.WorkbookReader(stream, {
       worksheets: 'emit',
     });
 

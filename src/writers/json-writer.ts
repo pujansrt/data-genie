@@ -1,12 +1,12 @@
-import { writeFileSync } from 'fs';
-import { DataWriter, DataRecord } from '@/core/interfaces';
+import { DataWriter, DataRecord, DataSink } from '@/core/interfaces';
+import { ensureDataSink } from '@/core/transport-utils';
 
 export class JsonWriter implements DataWriter {
-  private filePath: string;
+  private sink: DataSink;
   private records: DataRecord[] = [];
 
-  constructor(filePath: string) {
-    this.filePath = filePath;
+  constructor(sink: string | DataSink) {
+    this.sink = ensureDataSink(sink);
   }
 
   public async write(record: DataRecord): Promise<void> {
@@ -20,6 +20,17 @@ export class JsonWriter implements DataWriter {
   }
 
   public async close(): Promise<void> {
-    writeFileSync(this.filePath, JSON.stringify(this.records, null, 2));
+    const stream = await this.sink.getStream();
+    return new Promise((resolve, reject) => {
+      stream.write(JSON.stringify(this.records, null, 2), (err) => {
+        if (err) return reject(err);
+        
+        if ((this.sink as any).finalize) {
+          (this.sink as any).finalize().then(resolve).catch(reject);
+        } else {
+          stream.end(resolve);
+        }
+      });
+    });
   }
 }

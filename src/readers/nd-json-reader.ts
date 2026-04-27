@@ -1,6 +1,6 @@
-import { createReadStream } from 'fs';
+import { DataReader, DataRecord, DataSource } from '@/core/interfaces';
+import { ensureDataSource } from '@/core/transport-utils';
 import * as readline from 'readline';
-import { DataReader, DataRecord } from '@/core/interfaces';
 
 /**
  * NDJsonReader class for reading data records from a file in NDJSON (Newline Delimited JSON) format.
@@ -8,14 +8,14 @@ import { DataReader, DataRecord } from '@/core/interfaces';
  * This class reads records incrementally, suitable for very large files.
  */
 export class NDJsonReader implements DataReader {
-  private filePath: string;
+  private source: DataSource;
 
   /**
    * Constructs a new NDJsonReader.
-   * @param filePath The path to the NDJSON file.
+   * @param source The path to the NDJSON file or a DataSource.
    */
-  constructor(filePath: string) {
-    this.filePath = filePath;
+  constructor(source: string | DataSource) {
+    this.source = ensureDataSource(source);
   }
 
   /**
@@ -32,7 +32,7 @@ export class NDJsonReader implements DataReader {
    * @returns An AsyncIterableIterator of DataRecord objects.
    */
   public async *read(): AsyncIterableIterator<DataRecord> {
-    const stream = createReadStream(this.filePath, { encoding: 'utf8' });
+    const stream = await this.source.getStream();
     const rl = readline.createInterface({
       input: stream,
       crlfDelay: Infinity // Recognizes both CRLF and LF as line endings
@@ -50,12 +50,8 @@ export class NDJsonReader implements DataReader {
         yield record;
       } catch (error) {
         // Log an error or throw if a line cannot be parsed as valid JSON
-        console.error(`NDJsonReader: Error parsing JSON line from ${this.filePath}: "${line.substring(0, 100)}..."`, error);
-        // Depending on your requirements, you might choose to:
-        // 1. continue; // Skip the malformed line and proceed
-        // 2. throw error; // Stop processing and propagate the error
-        // For a reader, skipping might be preferred to allow reading remaining valid data.
-        throw new Error(`Invalid JSON format in file ${this.filePath} on line: ${line.substring(0, 50)}...`);
+        console.error(`NDJsonReader: Error parsing JSON line from ${this.source.name()}: "${line.substring(0, 100)}..."`, error);
+        throw new Error(`Invalid JSON format in ${this.source.name()} on line: ${line.substring(0, 50)}...`);
       }
     }
   }

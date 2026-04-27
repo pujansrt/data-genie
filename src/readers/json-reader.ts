@@ -1,16 +1,16 @@
-import { createReadStream } from 'fs';
-import { DataReader, DataRecord } from '@/core/interfaces';
+import { DataReader, DataRecord, DataSource } from '@/core/interfaces';
+import { ensureDataSource } from '@/core/transport-utils';
 
 export class JsonReader implements DataReader {
-  private filePath: string;
+  private source: DataSource;
 
-  constructor(filePath: string) {
-    this.filePath = filePath;
+  constructor(source: string | DataSource) {
+    this.source = ensureDataSource(source);
   }
 
   public async *read(): AsyncIterableIterator<DataRecord> {
+    const stream = await this.source.getStream();
     const data = await new Promise<string>((resolve, reject) => {
-      const stream = createReadStream(this.filePath, { encoding: 'utf8' });
       let content = '';
       stream.on('data', (chunk) => (content += chunk));
       stream.on('end', () => resolve(content));

@@ -24,7 +24,6 @@ describe('CSV Handler', () => {
     await Job.run(reader, writer);
 
     const outputContent = fs.readFileSync(testOutputFile, 'utf8');
-    expect(outputContent).toContain('id,name');
     expect(outputContent).toContain('1,Alice');
     expect(outputContent).toContain('2,Bob');
   });

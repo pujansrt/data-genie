@@ -5,7 +5,8 @@ import {
   SetCalculatedField, 
   SetField, 
   SelectFields,
-  BasicFieldTransformer
+  BasicFieldTransformer,
+  MapFields
 } from '@/transformers/field-transformers';
 import { DataReader } from '@/core/interfaces';
 
@@ -92,5 +93,10 @@ describe('Transformers and Validation', () => {
     const remove = new RemoveFields('age').transform();
     record = remove(record);
     expect(record).not.toHaveProperty('age');
+
+    // Test MapFields
+    const mapper = new MapFields('fullName', ['fname', 'lname'], (f, l) => `${f} ${l}`).transform();
+    const mappedRecord = mapper({ fname: 'John', lname: 'Doe' });
+    expect(mappedRecord.fullName).toBe('John Doe');
   });
 });

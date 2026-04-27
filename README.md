@@ -16,7 +16,7 @@ graph TD
     %% Data Sources
     subgraph Inputs [Data Sources]
         direction TB
-        I1[CSV / TSV / Excel]
+        I1[CSV / TSV / Excel / Parquet]
         I2[JSON / NDJSON]
         I3[SQL Database]
         I4[API / REST]
@@ -127,11 +127,16 @@ await Job.run(sqlReader, sqlWriter);
 ```ts
 // Optional: npm install @aws-sdk/client-s3 @aws-sdk/lib-storage
 import { S3Client } from '@aws-sdk/client-s3';
-import { S3CSVReader, S3JsonWriter, Job } from '@pujansrt/data-genie';
+import { S3Source, S3Sink, CSVReader, JsonWriter, Job } from '@pujansrt/data-genie';
 
 const s3Client = new S3Client({ region: 'us-east-1' });
-const reader = new S3CSVReader(s3Client, 'my-source-bucket', 'data.csv');
-const writer = new S3JsonWriter(s3Client, 'my-target-bucket', 'data.ndjson');
+
+// Decoupled Transport: Use any format (CSV/JSON) with any source (S3/File)
+const source = new S3Source(s3Client, 'my-source-bucket', 'data.csv');
+const reader = new CSVReader(source);
+
+const sink = new S3Sink(s3Client, 'my-target-bucket', 'data.json');
+const writer = new JsonWriter(sink);
 
 await Job.run(reader, writer);
 ```
@@ -142,7 +147,9 @@ Read once, transform, and write to **multiple** destinations in parallel.
 ```ts
 const pipeline = new TransformingReader(reader)
   .add((r) => ({ ...r, NAME: String(r.full_name).toUpperCase() }))
-  .add(new SetCalculatedField('total', 'record.price * record.qty').transform());
+  .add(new SetCalculatedField('total', 'record.price * record.qty').transform())
+  // Custom function mapping
+  .add(new MapFields('summary', ['NAME', 'total'], (name, total) => `${name} spent $${total}`).transform());
 
 const multiWriter = new MultiWriter(
   new ConsoleWriter(),
@@ -163,7 +170,23 @@ const writer = new XlsxWriter('output.xlsx');
 await Job.run(reader, writer);
 ```
 
-### 5. API Ingestion with HttpReader
+### 5. Parquet Support
+```ts
+// Optional: npm install parquetjs-lite
+import { ParquetReader, ParquetWriter, Job } from '@pujansrt/data-genie';
+
+const schema = {
+  name: { type: 'UTF8' },
+  age: { type: 'INT64' }
+};
+
+const reader = new ParquetReader('data.parquet');
+const writer = new ParquetWriter('output.parquet', schema);
+
+await Job.run(reader, writer);
+```
+
+### 6. API Ingestion with HttpReader
 ```ts
 const apiReader = new HttpReader('https://api.example.com/data', {
   nextPageUrl: (res) => res.pagination.next_page
@@ -185,6 +208,32 @@ const writer = new MemoryWriter();
 await Job.run(reader, writer);
 
 console.log(writer.getRecords()); // [{ id: 1, ... }, ...]
+```
+
+---
+
+## Transformers
+Data-Genie provides a rich set of transformers to manipulate your data as it streams.
+
+### Custom Field Mapping
+Combine multiple fields using standard JavaScript functions.
+
+```ts
+import { CSVReader, TransformingReader, MapFields, JsonWriter, Job } from '@pujansrt/data-genie';
+
+const pipeline = new TransformingReader(new CSVReader('users.csv'))
+  .add(new MapFields('fullName', ['firstname', 'lastname'], (fn, ln) => `${fn} ${ln}`).transform());
+
+await Job.run(pipeline, new JsonWriter('output.json'));
+```
+
+### Calculated Fields
+Perform simple math or logic via strings (uses `eval` safely per record).
+
+```ts
+import { SetCalculatedField } from '@pujansrt/data-genie';
+
+pipeline.add(new SetCalculatedField('total', 'record.price * record.qty').transform());
 ```
 
 ---

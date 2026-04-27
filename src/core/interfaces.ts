@@ -1,5 +1,23 @@
+import { Readable, Writable } from 'stream';
+
 export interface DataRecord {
   [key: string]: any;
+}
+
+/**
+ * Represents a raw data source (File, S3, HTTP, etc.)
+ */
+export interface DataSource {
+  getStream(): Promise<Readable>;
+  name(): string;
+}
+
+/**
+ * Represents a raw data sink
+ */
+export interface DataSink {
+  getStream(): Promise<Writable>;
+  name(): string;
 }
 
 export interface DataReader {

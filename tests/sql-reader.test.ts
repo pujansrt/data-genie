@@ -53,7 +53,6 @@ describe('SQLReader', () => {
     expect(results).toHaveLength(3);
     expect(mockDb.query).toHaveBeenCalledTimes(2); // Efficient stop: Page 2 was < chunkSize
     
-    // Verify queries contains LIMIT and OFFSET
     expect(mockDb.query).toHaveBeenNthCalledWith(1, expect.stringContaining('LIMIT 2 OFFSET 0'), []);
     expect(mockDb.query).toHaveBeenNthCalledWith(2, expect.stringContaining('LIMIT 2 OFFSET 2'), []);
   });

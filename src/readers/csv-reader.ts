@@ -1,14 +1,14 @@
-import { createReadStream } from 'fs';
 import { parse } from 'csv-parse';
-import { DataReader, DataRecord } from '@/core/interfaces';
+import { DataReader, DataRecord, DataSource } from '@/core/interfaces';
+import { ensureDataSource } from '@/core/transport-utils';
 
 export class CSVReader implements DataReader {
-  private filePath: string;
+  private source: DataSource;
   private hasFieldNamesInFirstRow: boolean = false;
   private fieldSeparator: string = ',';
 
-  constructor(filePath: string) {
-    this.filePath = filePath;
+  constructor(source: string | DataSource) {
+    this.source = ensureDataSource(source);
   }
 
   public setFieldNamesInFirstRow(value: boolean): this {
@@ -22,7 +22,9 @@ export class CSVReader implements DataReader {
   }
 
   public async *read(): AsyncIterableIterator<DataRecord> {
-    const parser = createReadStream(this.filePath).pipe(
+    const stream = await this.source.getStream();
+
+    const parser = stream.pipe(
       parse({
         columns: this.hasFieldNamesInFirstRow,
         delimiter: this.fieldSeparator,

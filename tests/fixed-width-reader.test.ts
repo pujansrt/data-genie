@@ -5,7 +5,6 @@ import { FieldFilter, IsNotNull, IsType, PatternMatch, ValueMatch } from '@/filt
 import { FilterExpression } from '@/filters/filter-expressions';
 import { Job } from '@/core/job';
 
-// Mock the modules
 jest.mock('@/readers/fixed-width-reader');
 jest.mock('@/writers/json-writer');
 
@@ -70,7 +69,6 @@ describe('FixedWidthReader Records Example Pipeline', () => {
       return instance;
     });
 
-    // Mock JsonWriter: capture all records written
     (JsonWriter as jest.Mock).mockImplementation(() => {
       const instance = {
         write: async (record: any) => {

@@ -1,14 +1,17 @@
-import { createReadStream } from 'fs';
+import { DataReader, DataRecord, DataSource } from '@/core/interfaces';
+import { ensureDataSource } from '@/core/transport-utils';
 import * as readline from 'readline';
-import { DataRecord } from '@/core/interfaces';
 
-export class FixedWidthReader {
+export class FixedWidthReader implements DataReader {
+  private source: DataSource;
   private fieldWidths: number[] = [];
   private fieldNames: string[] = [];
   private hasFieldNamesInFirstRow = false;
   private initialized = false;
 
-  constructor(private readonly filePath: string) {}
+  constructor(source: string | DataSource) {
+    this.source = ensureDataSource(source);
+  }
 
   public setFieldWidths(...widths: number[]): this {
     this.fieldWidths = widths;
@@ -30,7 +33,7 @@ export class FixedWidthReader {
       throw new Error('Field widths must be defined before reading.');
     }
 
-    const stream = createReadStream(this.filePath, { encoding: 'utf-8' });
+    const stream = await this.source.getStream();
     const rl = readline.createInterface({ input: stream, crlfDelay: Infinity });
 
     for await (const line of rl) {

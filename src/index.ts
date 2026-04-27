@@ -5,10 +5,9 @@ export { TSVReader } from './readers/tsv-reader';
 export { NDJsonReader } from './readers/nd-json-reader';
 export { SQLReader } from './readers/sql-reader';
 export { HttpReader } from './readers/http-reader';
-export { S3CSVReader } from './readers/s3-csv-reader';
-export { S3JsonReader } from './readers/s3-json-reader';
 export { XlsxReader } from './readers/xlsx-reader';
 export { MemoryReader } from './readers/memory-reader';
+export { ParquetReader } from './readers/parquet-reader';
 
 export { CSVWriter } from './writers/csv-writer';
 export { ConsoleWriter } from './writers/console-writer';
@@ -18,18 +17,31 @@ export { TSVWriter } from './writers/tsv-writer';
 export { NDJsonWriter } from './writers/nd-json-writer';
 export { SQLWriter } from './writers/sql-writer';
 export { RetryingWriter } from './writers/retrying-writer';
-export { S3CSVWriter } from './writers/s3-csv-writer';
-export { S3JsonWriter } from './writers/s3-json-writer';
 export { MultiWriter } from './writers/multi-writer';
 export { XlsxWriter } from './writers/xlsx-writer';
 export { MemoryWriter } from './writers/memory-writer';
+export { ParquetWriter } from './writers/parquet-writer';
+
+// Transports
+export { FileSource, FileSink } from './core/file-transport';
+export { S3Source, S3Sink } from './core/s3-transport';
+export { HttpSource, HttpSink } from './core/http-transport';
+export { MemorySource, MemorySink } from './core/memory-transport';
 
 export { GroupByReader } from './transformers/group-by-reader';
 export { TransformingReader } from './transformers/transforming-reader';
 export { RemoveDuplicatesReader } from './transformers/remove-duplicates-reader';
 export { ValidatingReader } from './transformers/validating-reader';
 export { SchemaValidatingReader } from './transformers/schema-validating-reader';
-export { RemoveFields, SetCalculatedField, RenameField, SetField, SelectFields, BasicFieldTransformer } from './transformers/field-transformers';
+export { 
+  RemoveFields, 
+  SetCalculatedField, 
+  RenameField, 
+  SetField, 
+  SelectFields, 
+  BasicFieldTransformer, 
+  MapFields 
+} from './transformers/field-transformers';
 
 export { FilteringReader } from './filters/filtering-reader';
 export {
@@ -48,4 +60,4 @@ export { FilterExpression } from './filters/filter-expressions';
 
 export { Job, ConsoleLogger } from './core/job';
 
-export type { DataRecord, DataReader, DataWriter, Logger, SqlConnection } from './core/interfaces';
+export type { DataRecord, DataReader, DataWriter, Logger, SqlConnection, DataSource, DataSink } from './core/interfaces';

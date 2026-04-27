@@ -16,7 +16,6 @@ describe('Excel (XLSX) Handlers', () => {
   });
 
   it('should read and write XLSX files correctly', async () => {
-    // 1. Create a real XLSX file for the reader
     const workbook = new ExcelJS.Workbook();
     const sheet = workbook.addWorksheet('Sheet1');
     sheet.columns = [
@@ -27,13 +26,11 @@ describe('Excel (XLSX) Handlers', () => {
     sheet.addRow({ id: 2, name: 'Bob' });
     await workbook.xlsx.writeFile(testFile);
 
-    // 2. Use XlsxReader and XlsxWriter
     const reader = new XlsxReader(testFile);
     const writer = new XlsxWriter(outFile);
 
     await Job.run(reader, writer);
 
-    // 3. Verify the output file exists and has correct data
     expect(fs.existsSync(outFile)).toBe(true);
     
     const outWorkbook = new ExcelJS.Workbook();

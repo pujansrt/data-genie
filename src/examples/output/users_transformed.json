@@ -1,0 +1,42 @@
+[
+  {
+    "email": "john.doe@example.com",
+    "fname": "John",
+    "lname": "Doe",
+    "city": "New York",
+    "age": "30",
+    "fullName": "John Doe"
+  },
+  {
+    "email": "jane.smith@test.com",
+    "fname": "Jane",
+    "lname": "Smith",
+    "city": "London",
+    "age": "24",
+    "fullName": "Jane Smith"
+  },
+  {
+    "email": "peter.jones@domain.net",
+    "fname": "Peter",
+    "lname": "Jones",
+    "city": "Paris",
+    "age": "45",
+    "fullName": "Peter Jones"
+  },
+  {
+    "email": "alice.brown@sample.com",
+    "fname": "Alice",
+    "lname": "Brown",
+    "city": "Berlin",
+    "age": "35",
+    "fullName": "Alice Brown"
+  },
+  {
+    "email": "bob.white@example.org",
+    "fname": "Bob",
+    "lname": "White",
+    "city": "Tokyo",
+    "age": "28",
+    "fullName": "Bob White"
+  }
+]

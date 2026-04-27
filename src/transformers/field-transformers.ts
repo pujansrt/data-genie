@@ -176,11 +176,34 @@ export class SelectFields {
     return (record: DataRecord) => {
       const newRecord: DataRecord = {};
       this.fieldNames.forEach((fieldName) => {
-        if (record.hasOwnProperty(fieldName)) {
+        if (Object.prototype.hasOwnProperty.call(record, fieldName)) {
           newRecord[fieldName] = record[fieldName];
         }
       });
       return newRecord;
+    };
+  }
+}
+
+/**
+ * MapFields allows creating a new field by applying a function to existing fields.
+ */
+export class MapFields {
+  private outputField: string;
+  private inputFields: string[];
+  private mapper: (...args: any[]) => any;
+
+  constructor(outputField: string, inputFields: string[], mapper: (...args: any[]) => any) {
+    this.outputField = outputField;
+    this.inputFields = inputFields;
+    this.mapper = mapper;
+  }
+
+  public transform(): RecordTransformation {
+    return (record: DataRecord) => {
+      const args = this.inputFields.map(field => record[field]);
+      record[this.outputField] = this.mapper(...args);
+      return record;
     };
   }
 }

@@ -1,33 +1,36 @@
-import { createWriteStream } from 'fs';
-import { stringify } from 'csv-stringify';
-import { DataWriter, DataRecord } from '@/core/interfaces';
+import { stringify, Stringifier } from 'csv-stringify';
+import { DataWriter, DataRecord, DataSink } from '@/core/interfaces';
+import { Writable } from 'stream';
+import { ensureDataSink } from '@/core/transport-utils';
 
 export class CSVWriter implements DataWriter {
-  private filePath: string;
-  private outputStream: ReturnType<typeof createWriteStream>;
-  private stringifier: ReturnType<typeof stringify>;
+  private sink: DataSink;
+  private fieldNames: string[] = [];
   private headerWritten: boolean = false;
-  private fieldNames: string[] = []; // To store header names if needed
+  private stringifier: Stringifier;
+  private outputStream?: Writable;
 
-  constructor(filePath: string) {
-    this.filePath = filePath;
-    this.outputStream = createWriteStream(this.filePath);
+  constructor(sink: string | DataSink) {
+    this.sink = ensureDataSink(sink);
     this.stringifier = stringify();
-    this.stringifier.pipe(this.outputStream);
   }
 
   public setFieldNamesInFirstRow(value: boolean): this {
-    // Logic to handle writing header row
+    this.headerWritten = !value;
     return this;
   }
 
+  private async initializeStream(): Promise<void> {
+    if (this.outputStream) return;
+    this.outputStream = await this.sink.getStream();
+    this.stringifier.pipe(this.outputStream);
+  }
+
   public async write(record: DataRecord): Promise<void> {
+    await this.initializeStream();
+
     if (!this.headerWritten && this.fieldNames.length === 0) {
-      // Infer field names from the first record if not explicitly set
       this.fieldNames = Object.keys(record);
-      this.stringifier.write(this.fieldNames);
-      this.headerWritten = true;
-    } else if (!this.headerWritten && this.fieldNames.length > 0) {
       this.stringifier.write(this.fieldNames);
       this.headerWritten = true;
     }
@@ -47,10 +50,22 @@ export class CSVWriter implements DataWriter {
   }
 
   public async close(): Promise<void> {
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
       this.stringifier.end(() => {
-        this.outputStream.end(() => {
-          resolve();
+        if (!this.outputStream) {
+            resolve();
+            return;
+        }
+
+        this.outputStream.end(async () => {
+            try {
+                if ((this.sink as any).finalize) {
+                    await (this.sink as any).finalize();
+                }
+                resolve();
+            } catch (error) {
+                reject(error);
+            }
         });
       });
     });

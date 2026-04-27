@@ -1,21 +1,21 @@
-import { createReadStream } from 'fs';
+import { DataReader, DataRecord, DataSource } from '@/core/interfaces';
+import { ensureDataSource } from '@/core/transport-utils';
 import { parse } from 'csv-parse';
-import { DataReader, DataRecord } from '@/core/interfaces';
 
 /**
  * TSVReader class for reading data records from a Tab-Separated Values (TSV) file.
  * It uses the 'csv-parse' library, configured specifically for tab delimiters.
  */
 export class TSVReader implements DataReader {
-  private filePath: string;
+  private source: DataSource;
   private hasFieldNamesInFirstRow: boolean = false;
 
   /**
    * Constructs a new TSVReader.
-   * @param filePath The path to the TSV file.
+   * @param source The path to the TSV file or a DataSource.
    */
-  constructor(filePath: string) {
-    this.filePath = filePath;
+  constructor(source: string | DataSource) {
+    this.source = ensureDataSource(source);
   }
 
   /**
@@ -35,7 +35,8 @@ export class TSVReader implements DataReader {
    * @returns An AsyncIterableIterator of DataRecord objects.
    */
   public async *read(): AsyncIterableIterator<DataRecord> {
-    const parser = createReadStream(this.filePath).pipe(
+    const stream = await this.source.getStream();
+    const parser = stream.pipe(
       parse({
         columns: this.hasFieldNamesInFirstRow,
         delimiter: '\t', // Fixed delimiter for TSV

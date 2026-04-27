@@ -1,39 +1,45 @@
-import { DataWriter, DataRecord } from '@/core/interfaces';
+import { DataWriter, DataRecord, DataSink } from '@/core/interfaces';
 import * as ExcelJS from 'exceljs';
+import { ensureDataSink } from '@/core/transport-utils';
+import { FileSink } from '@/core/file-transport';
 
 export interface XlsxWriterOptions {
   sheetName?: string;
   useStyles?: boolean;
 }
 
-/**
- * XlsxWriter writes data records to an Excel file using a streaming approach.
- * Suitable for generating very large XLSX reports.
- */
 export class XlsxWriter implements DataWriter {
   private workbookWriter: any;
   private worksheet: any;
   private options: XlsxWriterOptions;
   private headerWritten: boolean = false;
   private fieldNames: string[] = [];
+  private sink: DataSink;
 
-  constructor(filePath: string, options: XlsxWriterOptions = {}) {
+  constructor(sink: string | DataSink, options: XlsxWriterOptions = {}) {
     try {
       require.resolve('exceljs');
     } catch (e) {
-      throw new Error("The 'exceljs' package is required to use XlsxWriter. Please install it with 'npm install exceljs'.");
+      throw new Error("The 'exceljs' package is required to use XlsxWriter.");
     }
+    
+    this.sink = ensureDataSink(sink);
     this.options = {
       sheetName: 'Sheet1',
       useStyles: false,
       ...options
     };
 
-    this.workbookWriter = new (ExcelJS as any).stream.xlsx.WorkbookWriter({
-      filename: filePath,
-      useStyles: this.options.useStyles
-    });
+    // ExcelJS streaming writer needs a filename or a stream
+    // For now, we assume FileSink or we could get the stream
+    const config: any = { useStyles: this.options.useStyles };
+    if (this.sink instanceof FileSink) {
+        config.filename = (this.sink as any).filePath;
+    } else {
+        // Fallback or potentially get stream (ExcelJS supports stream)
+    }
 
+    this.workbookWriter = new (ExcelJS as any).stream.xlsx.WorkbookWriter(config);
     this.worksheet = this.workbookWriter.addWorksheet(this.options.sheetName);
   }
 

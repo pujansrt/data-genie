@@ -4,7 +4,6 @@ import { TransformingReader } from '@/transformers/transforming-reader';
 import { RenameField } from '@/transformers/field-transformers';
 import { Job } from '@/core/job';
 
-// Mock the modules
 jest.mock('@/readers/csv-reader');
 jest.mock('@/writers/json-writer');
 
@@ -26,7 +25,8 @@ describe('Rename Duplicate Fields Example Pipeline', () => {
     capturedOutput = [];
 
     (CSVReader as jest.Mock).mockImplementation(() => {
-      const instance = {
+
+      return {
         setFieldNamesInFirstRow: jest.fn().mockReturnThis(),
         read: async function* () {
           const mockInputData = [
@@ -54,7 +54,6 @@ describe('Rename Duplicate Fields Example Pipeline', () => {
           }
         }
       };
-      return instance;
     });
 
     (JsonWriter as jest.Mock).mockImplementation(() => {
