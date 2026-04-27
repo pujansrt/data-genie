@@ -8,7 +8,7 @@ import { Job } from '@/core/job';
 jest.mock('@/readers/fixed-width-reader');
 jest.mock('@/writers/json-writer');
 
-describe('FixedWidthReader Records Example Pipeline', () => {
+describe('Filter Pipeline (Mocked)', () => {
   let capturedOutput: any[];
   async function runFilterExamplePipeline() {
     let readerFilter = new FixedWidthReader('input/example.fw').setFieldNamesInFirstRow(true);
@@ -28,10 +28,11 @@ describe('FixedWidthReader Records Example Pipeline', () => {
   beforeEach(() => {
     capturedOutput = [];
 
-    // Mock CSVReader: make it return a specific set of mock data
+    // Mock FixedWidthReader: make it return a specific set of mock data
     (FixedWidthReader as jest.Mock).mockImplementation(() => {
       const instance = {
         setFieldNamesInFirstRow: jest.fn().mockReturnThis(),
+        setFieldWidths: jest.fn().mockReturnThis(),
         read: async function* () {
           const mockInputData = [
             // --- Records that SHOULD PASS all filters ---

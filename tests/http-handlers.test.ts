@@ -63,4 +63,27 @@ describe('HttpReader', () => {
     expect(results).toHaveLength(2);
     expect(global.fetch).toHaveBeenCalledTimes(2);
   });
+
+  it('should throw error on non-ok HTTP response', async () => {
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: false,
+      status: 404,
+      text: async () => 'Not Found'
+    });
+
+    const reader = new HttpReader('url');
+    const iterator = reader.read();
+    await expect(iterator.next()).rejects.toThrow('failed with 404');
+  });
+
+  it('should throw error if records are not an array', async () => {
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ data: 'not an array' })
+    });
+
+    const reader = new HttpReader('url', { resultsPath: (res) => res.data });
+    const iterator = reader.read();
+    await expect(iterator.next()).rejects.toThrow('records are not in an array format');
+  });
 });

@@ -47,4 +47,15 @@ describe('S3 Handlers (Decoupled Transport)', () => {
     const { Upload } = require('@aws-sdk/lib-storage');
     expect(Upload).toHaveBeenCalled();
   });
+
+  it('should throw error if S3 response body is not readable', async () => {
+    mockS3Client.send.mockResolvedValueOnce({
+      Body: 'not a stream'
+    });
+
+    const source = new S3Source(mockS3Client as any, 'b', 'k');
+    const reader = new CSVReader(source);
+    const iterator = reader.read();
+    await expect(iterator.next()).rejects.toThrow('S3 Body is not a Readable stream');
+  });
 });
