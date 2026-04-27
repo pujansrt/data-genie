@@ -3,6 +3,7 @@ export { FixedWidthReader } from './readers/fixed-width-reader';
 export { JsonReader } from './readers/json-reader';
 export { TSVReader } from './readers/tsv-reader';
 export { NDJsonReader } from './readers/nd-json-reader';
+export { SQLReader } from './readers/sql-reader';
 
 export { CSVWriter } from './writers/csv-writer';
 export { ConsoleWriter } from './writers/console-writer';

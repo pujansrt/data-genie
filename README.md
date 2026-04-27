@@ -11,7 +11,8 @@ graph TD
         I1[CSV / TSV]
         I2[JSON / NDJSON]
         I3[Fixed Width]
-        I4[Custom Reader]
+        I4[SQL Database]
+        I5[Custom Reader]
     end
 
     %% The Engine Core
@@ -58,7 +59,7 @@ graph TD
     classDef sink fill:#e8f5e9,stroke:#2e7d32,color:#1b5e20
     classDef feature fill:#fff3e0,stroke:#ef6c00,color:#e65100,font-style:italic
     
-    class I1,I2,I3,I4 source
+    class I1,I2,I3,I4,I5 source
     class O1,O2,O3,O4,O5 sink
     class Metrics,BP feature
 ```
@@ -126,17 +127,22 @@ async function run() {
 }
 ```
 
-### 2. High-Performance & Transactional SQL Writes
-Buffer records and perform bulk inserts with full transaction support.
+### 2. High-Performance SQL Batching & Pagination
+Handle massive datasets by fetching in chunks and writing in bulk.
 
 ```ts
-import { CSVReader, SQLWriter, Job } from '@pujansrt/data-genie';
+import { SQLReader, SQLWriter, Job } from '@pujansrt/data-genie';
+
+const sqlReader = new SQLReader(dbClient, 'SELECT * FROM big_table')
+  .setChunkSize(5000)       // Fetch 5000 rows at a time
+  .setOrderBy('created_at') // Required for stable pagination
+  .setUseTransaction(true); // Ensure a consistent snapshot
 
 const sqlWriter = new SQLWriter(dbClient, 'target_table')
-  .setBatchSize(1000)
-  .setUseTransaction(true); // Enable ACID transactions for the job
+  .setBatchSize(1000)       // Buffer 1000 rows for bulk insert
+  .setUseTransaction(true); // Wrap inserts in a transaction
 
-await Job.run(new CSVReader('large_data.csv'), sqlWriter);
+await Job.run(sqlReader, sqlWriter);
 ```
 
 ### 3. Pluggable Logging
