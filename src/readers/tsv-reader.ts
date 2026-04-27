@@ -8,7 +8,7 @@ import { parse } from 'csv-parse';
  */
 export class TSVReader implements DataReader {
   private source: DataSource;
-  private hasFieldNamesInFirstRow: boolean = false;
+  private hasFieldNamesInFirstRow: boolean = true;
 
   /**
    * Constructs a new TSVReader.
