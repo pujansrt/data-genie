@@ -1,6 +1,6 @@
 import { Job, ConsoleLogger } from '@/core/job';
 import { ConsoleWriter } from '@/writers/console-writer';
-import { DataReader, DataWriter, DataRecord, Logger } from '@/core/interfaces';
+import { DataReader, DataWriter, Logger } from '@/core/interfaces';
 
 describe('Job', () => {
   it('should cover ConsoleLogger methods', () => {

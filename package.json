@@ -18,21 +18,20 @@
   "license": "MIT",
   "description": "High performant ETL engine written in TypeScript",
   "main": "dist/index.js",
+  "module": "dist/index.mjs",
   "types": "dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/index.js",
+      "import": "./dist/index.mjs",
       "require": "./dist/index.js"
     }
   },
   "scripts": {
     "test": "jest",
     "test:coverage": "jest --coverage && jest-coverage-badges --input ./coverage/coverage-summary.json --output ./badges",
-    "dev": "tsc -w",
-    "build": "npm run clean && tsc -p tsconfig.build.json && npm run resolve-aliases",
-    "clean": "rm -rf dist",
-    "resolve-aliases": "tsc-alias -p tsconfig.build.json"
+    "dev": "tsup --watch",
+    "build": "tsup"
   },
   "repository": {
     "type": "git",
