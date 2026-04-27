@@ -4,6 +4,9 @@ export { JsonReader } from './readers/json-reader';
 export { TSVReader } from './readers/tsv-reader';
 export { NDJsonReader } from './readers/nd-json-reader';
 export { SQLReader } from './readers/sql-reader';
+export { HttpReader } from './readers/http-reader';
+export { S3CSVReader } from './readers/s3-csv-reader';
+export { S3JsonReader } from './readers/s3-json-reader';
 
 export { CSVWriter } from './writers/csv-writer';
 export { ConsoleWriter } from './writers/console-writer';
@@ -13,6 +16,8 @@ export { TSVWriter } from './writers/tsv-writer';
 export { NDJsonWriter } from './writers/nd-json-writer';
 export { SQLWriter } from './writers/sql-writer';
 export { RetryingWriter } from './writers/retrying-writer';
+export { S3CSVWriter } from './writers/s3-csv-writer';
+export { S3JsonWriter } from './writers/s3-json-writer';
 
 export { GroupByReader } from './transformers/group-by-reader';
 export { TransformingReader } from './transformers/transforming-reader';

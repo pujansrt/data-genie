@@ -20,7 +20,9 @@ graph TD
         I2[JSON / NDJSON]
         I3[Fixed Width]
         I4[SQL Database]
-        I5[Custom Reader]
+        I5[API / REST]
+        I6[AWS S3]
+        I7[Custom Reader]
     end
 
     %% The Engine Core
@@ -51,7 +53,8 @@ graph TD
         O2[JSON / NDJSON]
         O3[CSV / TSV]
         O4[Fixed Width]
-        O5[Console / Logger]
+        O5[AWS S3]
+        O6[Console / Logger]
     end
 
     %% Main Flow
@@ -67,8 +70,8 @@ graph TD
     classDef sink fill:#e8f5e9,stroke:#2e7d32,color:#1b5e20
     classDef feature fill:#fff3e0,stroke:#ef6c00,color:#e65100,font-style:italic
     
-    class I1,I2,I3,I4,I5 source
-    class O1,O2,O3,O4,O5 sink
+    class I1,I2,I3,I4,I5,I6,I7 source
+    class O1,O2,O3,O4,O5,O6 sink
     class Metrics,BP feature
 ```
 
@@ -125,7 +128,7 @@ Data-Genie achieves this efficiency through several modern Node.js patterns:
 npm install @pujansrt/data-genie zod
 ```
 
-> **Note:** `zod` is an optional peer dependency. It is only required if you intend to use the `SchemaValidatingReader`.
+> **Note:** `zod` and `@aws-sdk/client-s3` are optional peer dependencies. They are only required if you intend to use the `SchemaValidatingReader` or `S3Readers`.
 ---
 
 ## Advanced Examples
@@ -178,7 +181,60 @@ const sqlWriter = new SQLWriter(dbClient, 'target_table')
 await Job.run(sqlReader, sqlWriter);
 ```
 
-### 3. Pluggable Logging
+### 3. API Ingestion with HttpReader
+Stream data from REST APIs with automated pagination.
+
+```ts
+import { HttpReader, SQLWriter, Job } from '@pujansrt/data-genie';
+
+const apiReader = new HttpReader('https://api.example.com/users', {
+  headers: { 'Authorization': 'Bearer YOUR_TOKEN' },
+  // Map response to the correct field
+  resultsPath: (res) => res.items,
+  // Automatically follow 'next_page' URL in the response
+  nextPageUrl: (res) => res.pagination.next_page
+});
+
+const sqlWriter = new SQLWriter(dbClient, 'users').setBatchSize(500);
+
+await Job.run(apiReader, sqlWriter);
+```
+
+### 4. Cloud Ingestion & Sinks (AWS S3)
+Stream large files directly between S3 buckets with constant memory.
+
+#### Setup
+Since the AWS SDK is large, it is marked as an **optional peer dependency**. You must install it manually in your project to use S3 features:
+
+```bash
+npm install @aws-sdk/client-s3 @aws-sdk/lib-storage
+```
+
+#### Usage Example
+You are responsible for creating the `S3Client`. This allows you to handle authentication via IAM Roles, Environment Variables, or explicit keys.
+
+```ts
+import { S3Client } from '@aws-sdk/client-s3';
+import { S3CSVReader, S3JsonWriter, Job } from '@pujansrt/data-genie';
+
+// Auth is handled by the client configuration
+const s3Client = new S3Client({ region: 'us-east-1' });
+
+async function runCloudPipeline() {
+  // 1. Setup Reader (Stream from S3)
+  const reader = new S3CSVReader(s3Client, 'my-source-bucket', 'raw/data.csv');
+
+  // 2. Setup Writer (Stream to S3 as NDJSON)
+  const writer = new S3JsonWriter(s3Client, 'my-target-bucket', 'clean/data.ndjson', {
+    format: 'ndjson'
+  });
+
+  // 3. Execute
+  await Job.run(reader, writer);
+}
+```
+
+### 5. API Ingestion with HttpReader
 Connect your own logger (e.g., Winston, Pino) to monitor jobs.
 
 ```ts
