@@ -8,6 +8,7 @@ export { HttpReader } from './readers/http-reader';
 export { S3CSVReader } from './readers/s3-csv-reader';
 export { S3JsonReader } from './readers/s3-json-reader';
 export { XlsxReader } from './readers/xlsx-reader';
+export { MemoryReader } from './readers/memory-reader';
 
 export { CSVWriter } from './writers/csv-writer';
 export { ConsoleWriter } from './writers/console-writer';
@@ -21,6 +22,7 @@ export { S3CSVWriter } from './writers/s3-csv-writer';
 export { S3JsonWriter } from './writers/s3-json-writer';
 export { MultiWriter } from './writers/multi-writer';
 export { XlsxWriter } from './writers/xlsx-writer';
+export { MemoryWriter } from './writers/memory-writer';
 
 export { GroupByReader } from './transformers/group-by-reader';
 export { TransformingReader } from './transformers/transforming-reader';

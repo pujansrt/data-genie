@@ -21,7 +21,8 @@ graph TD
         I3[SQL Database]
         I4[API / REST]
         I5[AWS S3]
-        I6[Custom Reader]
+        I6[Memory / Array]
+        I7[Custom Reader]
     end
 
     %% The Engine Core
@@ -52,7 +53,8 @@ graph TD
         O1[(SQL Database)]
         O2[Files: JSON/CSV/FW/Excel]
         O3[AWS S3]
-        O4[Console / Logger]
+        O4[Memory / Array]
+        O5[Console / Logger]
     end
 
     %% Main Flow
@@ -69,8 +71,8 @@ graph TD
     classDef sink fill:#e8f5e9,stroke:#2e7d32,color:#1b5e20
     classDef feature fill:#fff3e0,stroke:#ef6c00,color:#e65100,font-style:italic
     
-    class I1,I2,I3,I4,I5,I6 source
-    class O1,O2,O3,O4 sink
+    class I1,I2,I3,I4,I5,I6,I7 source
+    class O1,O2,O3,O4,O5 sink
     class Metrics feature
 ```
 
@@ -168,6 +170,21 @@ const apiReader = new HttpReader('https://api.example.com/data', {
 });
 
 await Job.run(apiReader, new JsonWriter('local_backup.json'));
+```
+
+### 6. Testing & Debugging (Memory Handlers)
+Use standard JavaScript arrays as sources or sinks for fast unit testing.
+
+```ts
+import { MemoryReader, MemoryWriter, Job } from '@pujansrt/data-genie';
+
+const data = [{ id: 1, name: 'Alice' }, { id: 2, name: 'Bob' }];
+const reader = new MemoryReader(data);
+const writer = new MemoryWriter();
+
+await Job.run(reader, writer);
+
+console.log(writer.getRecords()); // [{ id: 1, ... }, ...]
 ```
 
 ---
