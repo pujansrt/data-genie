@@ -19,6 +19,11 @@ export class S3CSVReader implements DataReader {
   private options: S3ReaderOptions;
 
   constructor(s3Client: S3Client, bucket: string, key: string, options: S3ReaderOptions = {}) {
+    try {
+      require.resolve('@aws-sdk/client-s3');
+    } catch (e) {
+      throw new Error("The '@aws-sdk/client-s3' package is required to use S3Readers. Please install it with 'npm install @aws-sdk/client-s3'.");
+    }
     this.s3Client = s3Client;
     this.bucket = bucket;
     this.key = key;

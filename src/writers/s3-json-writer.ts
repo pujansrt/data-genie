@@ -17,6 +17,12 @@ export class S3JsonWriter implements DataWriter {
   private firstRecord: boolean = true;
 
   constructor(s3Client: S3Client, bucket: string, key: string, options: S3JsonWriterOptions = {}) {
+    try {
+      require.resolve('@aws-sdk/client-s3');
+      require.resolve('@aws-sdk/lib-storage');
+    } catch (e) {
+      throw new Error("The '@aws-sdk/client-s3' and '@aws-sdk/lib-storage' packages are required to use S3Writers. Please install them with 'npm install @aws-sdk/client-s3 @aws-sdk/lib-storage'.");
+    }
     this.passThrough = new PassThrough();
     this.format = options.format || 'ndjson';
 

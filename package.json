@@ -46,6 +46,7 @@
     "eslint": "^9.30.0",
     "eslint-config-prettier": "^10.1.5",
     "eslint-plugin-prettier": "^5.5.1",
+    "exceljs": "^4.4.0",
     "jest": "^30.0.3",
     "jest-coverage-badges": "^1.1.2",
     "prettier": "^3.6.2",
@@ -90,6 +91,7 @@
   "peerDependencies": {
     "@aws-sdk/client-s3": "^3.0.0",
     "@aws-sdk/lib-storage": "^3.0.0",
+    "exceljs": "^4.0.0",
     "zod": "^3.0.0"
   },
   "peerDependenciesMeta": {
@@ -97,6 +99,9 @@
       "optional": true
     },
     "@aws-sdk/lib-storage": {
+      "optional": true
+    },
+    "exceljs": {
       "optional": true
     },
     "zod": {
