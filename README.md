@@ -2,7 +2,9 @@
 A high-performant, streaming-first **ETL Engine** in **TypeScript**, designed for reliability, scalability, and ease of use.
 
 ```mermaid
-graph LR
+%%{init: { 'theme': 'base', 'themeVariables': { 'primaryColor': '#E8F4F8', 'actorBkg': '#D2E4F9', 'edgeLabelBackground':'#ffffff', 'noteBkgColor': '#FDF2D4', 'noteBorderColor': '#F1C40F'}}}%%
+
+graph TD
     %% Data Sources
     subgraph Inputs [Data Sources]
         direction TB
