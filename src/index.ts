@@ -11,11 +11,13 @@ export { FixedWidthWriter } from './writers/fixed-width-writer';
 export { TSVWriter } from './writers/tsv-writer';
 export { NDJsonWriter } from './writers/nd-json-writer';
 export { SQLWriter } from './writers/sql-writer';
+export { RetryingWriter } from './writers/retrying-writer';
 
 export { GroupByReader } from './transformers/group-by-reader';
 export { TransformingReader } from './transformers/transforming-reader';
 export { RemoveDuplicatesReader } from './transformers/remove-duplicates-reader';
 export { ValidatingReader } from './transformers/validating-reader';
+export { SchemaValidatingReader } from './transformers/schema-validating-reader';
 export { RemoveFields, SetCalculatedField, RenameField, SetField, SelectFields, BasicFieldTransformer } from './transformers/field-transformers';
 
 export { FilteringReader } from './filters/filtering-reader';
@@ -33,6 +35,6 @@ export {
 } from './filters/field-filters';
 export { FilterExpression } from './filters/filter-expressions';
 
-export { Job } from './core/job';
+export { Job, ConsoleLogger } from './core/job';
 
-export type { DataRecord, DataReader, DataWriter } from './core/interfaces';
+export type { DataRecord, DataReader, DataWriter, Logger, SqlConnection } from './core/interfaces';

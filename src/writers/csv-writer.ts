@@ -31,8 +31,13 @@ export class CSVWriter implements DataWriter {
       this.stringifier.write(this.fieldNames);
       this.headerWritten = true;
     }
+
     const recordArray = this.fieldNames.map((fieldName) => record[fieldName]);
-    this.stringifier.write(recordArray);
+    const canWrite = this.stringifier.write(recordArray);
+
+    if (!canWrite) {
+      await new Promise((resolve) => this.stringifier.once('drain', resolve));
+    }
   }
 
   public async writeAll(records: AsyncIterableIterator<DataRecord>): Promise<void> {

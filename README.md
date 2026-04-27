@@ -1,183 +1,217 @@
 # Data-Genie
-A lightweight and efficient **ETL Engine** in **TypeScript**, suitable for various operations.
+A high-performant, streaming-first **ETL Engine** in **TypeScript**, designed for reliability, scalability, and ease of use.
 
 ![](./diagram.jpg)
 
-## 📦 Features
+## Core Mandates & Best Practices
 
-- 🔄 Read from various data sources (CSV, TSV, JSON, NDJSON, FixedWidth, etc.)
-- ✍️ Write to multiple formats (JSON, NDJSON, CSV, TSV, FixedWidth, SQL, Console, etc.)
-- ✂️ Filter and transform data with powerful field filters
-- 📊 Supports complex filtering expressions
-- 🔗 Chainable nd high performance operations for flexible data processing
-- 🔍 Supports data validation and transformation
-- 📈 Ideal for data cleaning, migration, and analysis
-- 🧩 Modular design for easy integration into existing projects
-- 🧪 Easy to use with TypeScript/JavaScript/Browser
-- 🔒 Secure and reliable with TypeScript's type safety
-- 🔧 Easy to install and get started (with examples)
-
-## 🚀 Getting Started
-
-### 🔧 Installation
-
-Install from npm:
-
-```bash
-npm install @pujansrt/data-genie
-```
-
-Or, with yarn:
-
-```bash
-yarn add @pujansrt/data-genie
-```
-
-<details>
-<summary>Development install (clone & build)</summary>
-
-```bash
-git clone https://github.com/pujansrt/data-genie.git
-cd data-genie
-npm install
-npm run build
-```
-</details>
+*   **Streaming-First Architecture:** Uses `AsyncIterableIterator` to ensure a constant memory footprint, regardless of data size.
+*   **Backpressure Aware:** Writers respect stream drains, preventing memory spikes during slow disk/network I/O.
+*   **Schema-Driven Validation:** Integration with libraries like **Zod** for robust, contract-based data integrity.
+*   **Fault Tolerance:** Built-in support for **Dead Letter Queues (DLQ)** to divert invalid records without crashing jobs.
+*   **Performance Optimized:** `SQLWriter` supports configurable batch/bulk inserts to minimize network round-trips.
+*   **Interface-Driven:** Decoupled architecture allowing easy extension for new Readers, Transformers, and Writers.
 
 ---
 
-## 📚 How to use
+## Features
 
-### Example to read a CSV file, filter data, and write to console
+- **Multi-Format Support:** Read/Write CSV, TSV, JSON, NDJSON, FixedWidth, SQL, and more.
+- **Advanced Transformations:** Chainable renames, field calculations, and complex groupings.
+- **Fluent Builder API:** Human-readable pipeline definitions.
+- **Deduplication:** Robust record deduplication with memory-safety limits.
+- **Metrics & Monitoring:** Built-in tracking for throughput, record counts, and duration.
 
-```ts
-import { ConsoleWriter, CSVReader, Job, SetCalculatedField, TransformingReader, RemoveDuplicatesReader, RemoveFields } from '@pujansrt/data-genie';
+---
 
-async function runExample() {
-  let reader: any = new CSVReader('input/credit-balance-01.csv').setFieldNamesInFirstRow(true);
-  
-  reader = new RemoveDuplicatesReader(reader, 'Rating', 'CreditLimit');
-  
-  reader = new TransformingReader(reader)
-    .add(new SetCalculatedField('AvailableCredit', 'parseFloat(record.CreditLimit) - parseFloat(record.Balance)').transform())
-    .add(new RemoveFields('CreditLimit', 'Balance').transform());
+## Getting Started
 
-  await Job.run(reader, new ConsoleWriter());
-  // await Job.run(filteringReader, new JsonWriter('output/filtered-data.json'));
-  // await Job.run(filteringReader, new CsvWriter('output/filtered-data.csv'));
-  // await Job.run(filteringReader, new FixedWidthWriter('output/filtered-data.fw').setFieldNamesInFirstRow(true).setFieldWidths(10, 15, 10, 15));
-}
+### Installation
 
-runExample().catch(console.error);
+```bash
+npm install @pujansrt/data-genie zod
 ```
 
-### Writing to Fixed Width File
+---
+
+## Advanced Examples
+
+### 1. Schema Validation with Zod & DLQ
+This example demonstrates how to enforce a data contract and divert "bad" records to a separate file.
 
 ```ts
-const fwWriter = new FixedWidthWriter('output/ex-simulated.fw').setFieldNamesInFirstRow(true).setFieldWidths(10, 15, 10, 15);
+import { CSVReader, JsonWriter, SchemaValidatingReader, Job } from '@pujansrt/data-genie';
+import { z } from 'zod';
+
+// Define a schema
+const UserSchema = z.object({
+  id: z.coerce.number(),
+  email: z.string().email(),
+  age: z.coerce.number().min(18)
+});
+
+async function run() {
+  const reader = new CSVReader('users.csv').setFieldNamesInFirstRow(true);
+  const dlqWriter = new JsonWriter('errors.json');
+  
+  // Wrap reader with validation
+  const validatedReader = new SchemaValidatingReader(reader, UserSchema)
+    .setDLQ(dlqWriter);
+
+  const writer = new JsonWriter('clean_users.json');
+
+  // Run job and get metrics
+  const metrics = await Job.run(validatedReader, writer);
+  console.log(`Throughput: ${metrics.recordsPerSecond} rec/sec`);
+}
+```
+
+### 2. High-Performance & Transactional SQL Writes
+Buffer records and perform bulk inserts with full transaction support.
+
+```ts
+import { CSVReader, SQLWriter, Job } from '@pujansrt/data-genie';
+
+const sqlWriter = new SQLWriter(dbClient, 'target_table')
+  .setBatchSize(1000)
+  .setUseTransaction(true); // Enable ACID transactions for the job
+
+await Job.run(new CSVReader('large_data.csv'), sqlWriter);
+```
+
+### 3. Pluggable Logging
+Connect your own logger (e.g., Winston, Pino) to monitor jobs.
+
+```ts
+import { Job } from '@pujansrt/data-genie';
+
+const myLogger = {
+  info: (msg) => console.log(`[CUSTOM] ${msg}`),
+  warn: (msg) => console.warn(msg),
+  error: (msg) => console.error(msg)
+};
+
+await Job.run(reader, writer, { logger: myLogger });
+```
+
+### 4. Resilient Writing (Retry & Circuit Breaker)
+Protect your pipeline from flaky networks or database downtime.
+
+```ts
+import { SQLWriter, RetryingWriter, Job } from '@pujansrt/data-genie';
+
+const sqlWriter = new SQLWriter(dbClient, 'users');
+
+// Wrap the writer with retry and circuit breaker logic
+const resilientWriter = new RetryingWriter(sqlWriter, {
+  maxRetries: 3,
+  initialDelayMs: 1000,
+  circuitBreakerThreshold: 5 // Stop trying if 5 records fail in a row
+});
+
+await Job.run(reader, resilientWriter);
+```
+
+### 5. Memory-Safe Deduplication
+Prevent OOM errors when deduplicating massive datasets.
+
+```ts
+import { CSVReader, RemoveDuplicatesReader, Job, ConsoleWriter } from '@pujansrt/data-genie';
+
+const reader = new CSVReader('data.csv');
+const dedupeReader = new RemoveDuplicatesReader(reader, 'email')
+  .setMaxKeys(500000); // Safety limit for memory usage
+
+await Job.run(dedupeReader, new ConsoleWriter());
+```
+
+---
+
+## Common Workflows
+
+### Filtering with Field Rules
+Use granular rules like `IsNotNull`, `ValueMatch`, or `PatternMatch`.
+
+```ts
+import { CSVReader, FilteringReader, FieldFilter, IsNotNull, ValueMatch, Job, ConsoleWriter } from '@pujansrt/data-genie';
+
+const reader = new CSVReader('data.csv').setFieldNamesInFirstRow(true);
+
+const filter = new FilteringReader(reader)
+  .add(new FieldFilter('Rating')
+    .addRule(IsNotNull())
+    .addRule(ValueMatch('A', 'B'))
+    .createRecordFilter());
+
+await Job.run(filter, new ConsoleWriter());
+```
+
+### Writing to Fixed-Width Format
+Useful for legacy system integrations.
+
+```ts
+import { CSVReader, FixedWidthWriter, Job } from '@pujansrt/data-genie';
+
+const reader = new CSVReader('data.csv').setFieldNamesInFirstRow(true);
+
+const fwWriter = new FixedWidthWriter('output.fw')
+  .setFieldNamesInFirstRow(true)
+  .setFieldWidths(10, 20, 15); // Define widths for each column
 
 await Job.run(reader, fwWriter);
 ```
 
-
-### Example to read a CSV file, filter data, and write to JSON:
-
+### CSV to JSON with Field Manipulation
 ```ts
-import { ConsoleWriter, CSVReader, FieldFilter, FilterExpression, FilteringReader, IsNotNull, IsType, Job, PatternMatch, ValueMatch } from "@pujansrt/data-genie";
+import { CSVReader, TransformingReader, SetCalculatedField, RemoveFields, Job, JsonWriter } from '@pujansrt/data-genie';
 
-async function runExample() {
-  const reader = new CSVReader('input/example.csv').setFieldNamesInFirstRow(true);
+let reader = new CSVReader('input.csv').setFieldNamesInFirstRow(true);
 
-  const filteringReader = new FilteringReader(reader)
-    .add(new FieldFilter('Rating').addRule(IsNotNull()).addRule(IsType('string')).addRule(ValueMatch('B', 'C')).createRecordFilter())
-    .add(new FieldFilter('Account').addRule(IsNotNull()).addRule(IsType('string')).addRule(PatternMatch('[0-9]*')).createRecordFilter())
-    .add(
-      new FilterExpression(
-        'record.CreditLimit !== undefined && record.Balance !== undefined && parseFloat(record.CreditLimit) >= 0 && parseFloat(record.CreditLimit) <= 5000 && parseFloat(record.Balance) <= parseFloat(record.CreditLimit)'
-      ).createRecordFilter()
-    );
+reader = new TransformingReader(reader)
+  .add(new SetCalculatedField('total', 'record.price * record.qty').transform())
+  .add(new RemoveFields('price', 'qty').transform());
 
-  await Job.run(filteringReader, new ConsoleWriter());
-}
-runExample().catch(console.error);
+await Job.run(reader, new JsonWriter('output.json'));
 ```
 
-### Example to read a JSON file and transform data
-
+### Filtering with Expressions
 ```ts
-import {ConsoleWriter, Job, JsonReader, SetCalculatedField, TransformingReader} from "@pujansrt/data-genie";
+import { CSVReader, FilteringReader, FilterExpression, Job, ConsoleWriter } from '@pujansrt/data-genie';
 
-async function runExample() {
-    let reader: any = new JsonReader('input/simple-json-input.json');
+const reader = new CSVReader('data.csv').setFieldNamesInFirstRow(true);
+const filter = new FilteringReader(reader)
+  .add(new FilterExpression('record.age > 21 && record.status === "active"').createRecordFilter());
 
-    reader = new TransformingReader(reader)
-        .setCondition((record) => record.balance < 0)
-        .add(new SetCalculatedField('balance', '0.0').transform()); // Using SetCalculatedField for dynamic value
-
-    await Job.run(reader, new ConsoleWriter());
-}
-runExample().catch(console.error);
-```
-
-### FixedWidth Example
-
-```ts
-import {ConsoleWriter, FixedWidthReader, Job} from "@pujansrt/data-genie";
-
-async function runExample() {
-    let reader: any = new FixedWidthReader('input/credit-balance-01.fw');
-    reader.setFieldWidths(8, 16, 16, 12, 14, 16, 7);
-    reader.setFieldNamesInFirstRow(true);
-
-    await Job.run(reader, new ConsoleWriter());
-}
-runExample().catch(console.error);
-```
-
-### Transform, Deduplicate and Fields Manipulation Example
-
-```ts
-import {ConsoleWriter, CSVReader, Job, RemoveDuplicatesReader, RemoveFields, SetCalculatedField, TransformingReader} from "@pujansrt/data-genie";
-
-async function runExample() {
-    let reader: any = new CSVReader('input/credit-balance-01.csv').setFieldNamesInFirstRow(true);
-    
-    reader = new RemoveDuplicatesReader(reader, 'Rating', 'CreditLimit');
-    
-    reader = new TransformingReader(reader)
-        .add(new SetCalculatedField('AvailableCredit', 'parseFloat(record.CreditLimit) - parseFloat(record.Balance)').transform())
-        .add(new RemoveFields('CreditLimit', 'Balance').transform());
-
-    await Job.run(reader, new ConsoleWriter());
-}
-
-runExample().catch(console.error);
+await Job.run(filter, new ConsoleWriter());
 ```
 
 ---
-## Upcoming Features
-- Support for Apache Avro
-- Support for Apache Parquet
-- 🔗 Enhanced data validation rules
 
-## 🧪 Use Cases
+## Edge Cases Handled
 
-- Data cleaning and transformation
-- Data validation and filtering
-- Data migration and ETL processes
-- Data analysis and reporting
-- Data integration from multiple sources
+*   **Slow Sinks:** Using backpressure awareness, the engine pauses reading if the writer is slow.
+*   **Malformed Data:** Validating readers can be configured to throw or skip/divert bad records.
+*   **Large Keys:** Deduplication uses NULL-byte separators for composite keys to prevent collision and JSON-based serialization for robustness.
+*   **Database Timeouts:** Bulk inserts in SQLWriter reduce transaction overhead and connection idle time.
 
+---
 
-## 🤝 Contributing
+## Use Cases
+
+- **Data Cleaning:** Removing duplicates and normalizing formats.
+- **Migration:** Moving data between CSV/JSON and SQL databases.
+- **Validation:** Enforcing strict schemas on incoming partner data.
+- **ETL Pipelines:** Building modular, testable data workflows.
+
+## Contributing
 Contributions are welcome! Please open an issue or submit a pull request.
 
 ---
 
-## 📜 License
+## License
 MIT License — free for personal and commercial use.
 
 ---
 
-## 👤 Author
-Developed and maintained by Pujan Srivastava, a mathematician and software engineer with 18+ years of programming experience.
+## Author
+Developed and maintained by Pujan Srivastava

@@ -1,4 +1,4 @@
-import { DataReader, DataRecord } from '@/core/interfaces';
+import { DataReader, DataRecord, DataWriter } from '@/core/interfaces';
 import { DataTransformer } from '@/transformers/transformers';
 
 export interface ValidationMessage {
@@ -13,7 +13,8 @@ export class ValidatingReader extends DataTransformer {
   private rules: RecordValidationRule[] = [];
   private messages: ValidationMessage[] = [];
   private throwExceptionOnFailure: boolean = false;
-  private recordStackTraceInMessage: boolean = false; // For more detailed error reporting
+  private recordStackTraceInMessage: boolean = false;
+  private dlqWriter?: DataWriter;
 
   constructor(reader: DataReader) {
     super(reader);
@@ -29,37 +30,55 @@ export class ValidatingReader extends DataTransformer {
     return this;
   }
 
-  public setRecordStackTraceInMessage(value: boolean): this {
-    this.recordStackTraceInMessage = value;
+  /**
+   * Sets a DataWriter to act as a Dead Letter Queue (DLQ).
+   * Invalid records will be written here instead of being yielded.
+   */
+  public setDLQ(writer: DataWriter): this {
+    this.dlqWriter = writer;
     return this;
+  }
+
+  public async *read(): AsyncIterableIterator<DataRecord> {
+    try {
+      for await (const record of this.reader.read()) {
+        let isValid = true;
+        const recordMessages: ValidationMessage[] = [];
+
+        for (const rule of this.rules) {
+          if (!rule(record, recordMessages)) {
+            isValid = false;
+          }
+        }
+
+        if (!isValid) {
+          if (this.throwExceptionOnFailure) {
+            throw new Error(`Validation failed for record: ${JSON.stringify(record)}`);
+          }
+
+          this.messages.push(...recordMessages);
+
+          if (this.dlqWriter) {
+            // Divert to DLQ and do NOT yield to the main pipeline
+            await this.dlqWriter.write({
+              ...record,
+              _errors: recordMessages.map((m) => m.message)
+            });
+            continue; 
+          }
+        }
+
+        yield record;
+      }
+    } finally {
+      if (this.dlqWriter) {
+        await this.dlqWriter.close();
+      }
+    }
   }
 
   public getMessages(): ValidationMessage[] {
     return this.messages;
-  }
-
-  public async *read(): AsyncIterableIterator<DataRecord> {
-    for await (const record of this.reader.read()) {
-      let isValid = true;
-      const recordMessages: ValidationMessage[] = [];
-
-      for (const rule of this.rules) {
-        if (!rule(record, recordMessages)) {
-          isValid = false;
-        }
-      }
-
-      if (!isValid && this.throwExceptionOnFailure) {
-        const errorMessage = `Validation failed for record: ${JSON.stringify(record)}. Messages: ${JSON.stringify(recordMessages)}`;
-        if (this.recordStackTraceInMessage) {
-          // You might want to capture a stack trace here if needed, but it's more complex
-        }
-        throw new Error(errorMessage);
-      } else if (!isValid) {
-        this.messages.push(...recordMessages);
-      }
-      yield record; // Yield all records, valid or not, or add a flag to filter them out
-    }
   }
 }
 

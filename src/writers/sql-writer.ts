@@ -11,12 +11,14 @@ export class SQLWriter implements DataWriter {
   private dbClient: SqlConnection;
   private fieldNames: string[] = [];
   private initializedFieldNames: boolean = false;
+  private batchSize: number = 1; // Default to 1 (current behavior)
+  private buffer: DataRecord[] = [];
+  private useTransaction: boolean = false;
+  private transactionStarted: boolean = false;
 
   /**
    * Constructs a new SQLWriter.
-   * @param dbClient An object implementing the SqlConnection interface, provided by the user.
-   * This is typically a database client or connection pool from an npm package
-   * (e.g., new Pool() from 'pg', createConnection() from 'mysql2').
+   * @param dbClient An object implementing the SqlConnection interface.
    * @param tableName The name of the database table to write to.
    */
   constructor(dbClient: SqlConnection, tableName: string) {
@@ -28,79 +30,105 @@ export class SQLWriter implements DataWriter {
   }
 
   /**
-   * Sets the names of the fields. These names correspond to the column names in the database table
-   * and define the order of data extraction from `DataRecord` objects.
-   * @param names A list of string names for the fields (column names).
-   * @returns The current SQLWriter instance for chaining.
+   * Sets the batch size for inserts.
+   * @param size Number of records to buffer before executing a bulk insert.
    */
-  public setFieldNames(...names: string[]): this {
-    this.fieldNames = names;
-    this.initializedFieldNames = true; // Field names are explicitly set
+  public setBatchSize(size: number): this {
+    if (size < 1) throw new Error('Batch size must be at least 1');
+    this.batchSize = size;
     return this;
   }
 
   /**
-   * Writes a single data record to the SQL database.
-   * It constructs an `INSERT` statement dynamically based on field names and record data.
-   * @param record The DataRecord object to write.
-   * @returns A Promise that resolves when the record has been inserted.
-   * @throws Error if field names are not defined.
+   * Enables or disables the use of transactions for the entire job.
+   * Only works if the provided dbClient implements beginTransaction, commit, and rollback.
+   */
+  public setUseTransaction(value: boolean): this {
+    this.useTransaction = value;
+    return this;
+  }
+
+  /**
+   * Writes a single data record. It will be buffered until the batch size is reached.
    */
   public async write(record: DataRecord): Promise<void> {
-    // Determine field names if not explicitly set
+    if (this.useTransaction && !this.transactionStarted) {
+      if (typeof this.dbClient.beginTransaction === 'function') {
+        await this.dbClient.beginTransaction();
+        this.transactionStarted = true;
+      }
+    }
+
     if (!this.initializedFieldNames) {
       this.fieldNames = Object.keys(record);
       this.initializedFieldNames = true;
     }
 
-    if (this.fieldNames.length === 0) {
-      throw new Error('Field names must be defined using setFieldNames() or inferred from the first record before writing.');
-    }
+    this.buffer.push(record);
 
-    const columns = this.fieldNames.map((name) => `"${name}"`).join(', '); // Quote column names for safety
-    const placeholders = this.fieldNames.map((_, i) => `$${i + 1}`).join(', '); // For PostgreSQL-style parameters
-    const values = this.fieldNames.map((fieldName) => record[fieldName]);
-
-    // Construct the INSERT statement
-    const sql = `INSERT INTO "${this.tableName}" (${columns}) VALUES (${placeholders})`;
-
-    try {
-      await this.dbClient.query(sql, values);
-    } catch (error) {
-      console.error(`Error inserting record into ${this.tableName}:`, record, error);
-      throw error; // Re-throw to allow calling code to handle
+    if (this.buffer.length >= this.batchSize) {
+      await this.flush();
     }
   }
 
   /**
-   * Writes all data records from an asynchronous iterable to the SQL database.
-   * This method performs individual inserts. For batch inserts, consider a dedicated
-   * batching mechanism or a transactional approach if the underlying dbClient supports it.
-   *
-   * @param records An AsyncIterableIterator of DataRecord objects.
-   * @returns A Promise that resolves when all records have been written.
+   * Executes a bulk insert of all records currently in the buffer.
    */
+  private async flush(): Promise<void> {
+    if (this.buffer.length === 0) return;
+
+    const columns = this.fieldNames.map((name) => `"${name}"`).join(', ');
+    
+    // Create placeholders for bulk insert: ($1, $2), ($3, $4), ...
+    const rows: string[] = [];
+    const values: any[] = [];
+    let paramIndex = 1;
+
+    for (const record of this.buffer) {
+      const rowPlaceholders = this.fieldNames.map(() => `$${paramIndex++}`).join(', ');
+      rows.push(`(${rowPlaceholders})`);
+      values.push(...this.fieldNames.map((name) => record[name]));
+    }
+
+    const sql = `INSERT INTO "${this.tableName}" (${columns}) VALUES ${rows.join(', ')}`;
+
+    try {
+      await this.dbClient.query(sql, values);
+      this.buffer = []; // Clear buffer after successful write
+    } catch (error) {
+      if (this.useTransaction && this.transactionStarted && typeof this.dbClient.rollback === 'function') {
+        console.error('Rolling back transaction due to error...');
+        await this.dbClient.rollback();
+        this.transactionStarted = false; 
+      }
+      console.error(`Error in bulk insert into ${this.tableName}:`, error);
+      throw error;
+    }
+  }
+
   public async writeAll(records: AsyncIterableIterator<DataRecord>): Promise<void> {
     for await (const record of records) {
       await this.write(record);
     }
   }
 
-  /**
-   * In this design, the SQLWriter does not own the lifecycle of the dbClient.
-   * The user who provides the dbClient is responsible for closing it.
-   * This method is implemented to satisfy the DataWriter interface but does nothing.
-   * If you want the SQLWriter to manage connection closing, the SqlConnection interface
-   * would need an `end()` or `close()` method, and the user would pass a client
-   * that can be closed.
-   *
-   * @returns A Promise that resolves immediately.
-   */
   public async close(): Promise<void> {
-    // The dbClient is managed by the caller, so we don't close it here.
-    // If SqlConnection had a `.end()` or `.close()` method, you could call it here
-    // if the writer were responsible for the connection's lifecycle.
-    console.log('SQLWriter close() called. Database client lifecycle is managed by the caller.');
-    return Promise.resolve();
+    try {
+      await this.flush(); // Ensure any remaining records are written
+      
+      if (this.useTransaction && this.transactionStarted && typeof this.dbClient.commit === 'function') {
+        await this.dbClient.commit();
+        console.log('SQL Transaction committed.');
+        this.transactionStarted = false;
+      }
+    } catch (error) {
+       if (this.useTransaction && this.transactionStarted && typeof this.dbClient.rollback === 'function') {
+        await this.dbClient.rollback();
+        this.transactionStarted = false;
+      }
+      throw error;
+    } finally {
+      console.log('SQLWriter closed.');
+    }
   }
 }
