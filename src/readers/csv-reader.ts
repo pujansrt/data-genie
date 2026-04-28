@@ -1,7 +1,8 @@
 import { parse } from 'csv-parse';
-import { DataReader, DataRecord, DataSource } from '@/core/interfaces';
+import { DataRecord, DataSource } from '@/core/interfaces';
 import { ensureDataSource } from '@/core/transport-utils';
 import { SchemaValidator } from '@/transformers/schema-validating-reader';
+import { BaseReader } from '@/core/base-reader';
 
 export interface CSVReaderOptions<T> {
   schema?: SchemaValidator<T>;
@@ -9,13 +10,14 @@ export interface CSVReaderOptions<T> {
   delimiter?: string;
 }
 
-export class CSVReader<T = DataRecord> implements DataReader<T> {
+export class CSVReader<T = DataRecord> extends BaseReader<T> {
   private source: DataSource;
   private hasFieldNamesInFirstRow: boolean = true;
   private fieldSeparator: string = ',';
   private schema?: SchemaValidator<T>;
 
   constructor(source: string | DataSource, options?: CSVReaderOptions<T>) {
+    super();
     this.source = ensureDataSource(source);
     if (options) {
       this.schema = options.schema;

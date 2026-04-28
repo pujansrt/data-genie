@@ -1,13 +1,14 @@
-import { DataReader, DataRecord, DataSource } from '@/core/interfaces';
+import { DataRecord, DataSource } from '@/core/interfaces';
 import { ensureDataSource } from '@/core/transport-utils';
 import { parse } from 'csv-parse';
 import { SchemaValidator } from '@/transformers/schema-validating-reader';
+import { BaseReader } from '@/core/base-reader';
 
 /**
  * TSVReader class for reading data records from a Tab-Separated Values (TSV) file.
  * It uses the 'csv-parse' library, configured specifically for tab delimiters.
  */
-export class TSVReader<T = DataRecord> implements DataReader<T> {
+export class TSVReader<T = DataRecord> extends BaseReader<T> {
   private source: DataSource;
   private hasFieldNamesInFirstRow: boolean = true;
   private schema?: SchemaValidator<T>;
@@ -17,6 +18,7 @@ export class TSVReader<T = DataRecord> implements DataReader<T> {
    * @param source The path to the TSV file or a DataSource.
    */
   constructor(source: string | DataSource, options?: { schema?: SchemaValidator<T>; hasFieldNamesInFirstRow?: boolean }) {
+    super();
     this.source = ensureDataSource(source);
     this.schema = options?.schema;
     if (options?.hasFieldNamesInFirstRow !== undefined) {

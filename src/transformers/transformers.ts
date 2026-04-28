@@ -1,13 +1,15 @@
 import { DataReader, DataRecord } from '@/core/interfaces';
+import { BaseReader } from '@/core/base-reader';
 
 /**
  * Abstract base class for all data transformation readers.
  * It takes an existing DataReader and provides an interface for chaining transformations.
  */
-export abstract class DataTransformer<TOut = DataRecord, TIn = any> implements DataReader<TOut> {
+export abstract class DataTransformer<TOut = DataRecord, TIn = any> extends BaseReader<TOut> {
   protected reader: DataReader<TIn>;
 
   constructor(reader: DataReader<TIn>) {
+    super();
     this.reader = reader;
   }
 

@@ -2,6 +2,7 @@ import { DataReader, DataRecord, DataSource } from '@/core/interfaces';
 import { ensureDataSource } from '@/core/transport-utils';
 import * as readline from 'readline';
 import { SchemaValidator } from '@/transformers/schema-validating-reader';
+import { BaseReader } from '@/core/base-reader';
 
 export interface FixedWidthReaderOptions<T> {
   schema?: SchemaValidator<T>;
@@ -10,7 +11,7 @@ export interface FixedWidthReaderOptions<T> {
   hasFieldNamesInFirstRow?: boolean;
 }
 
-export class FixedWidthReader<T = DataRecord> implements DataReader<T> {
+export class FixedWidthReader<T = DataRecord> extends BaseReader<T> {
   private source: DataSource;
   private fieldWidths: number[] = [];
   private fieldNames: string[] = [];
@@ -19,6 +20,7 @@ export class FixedWidthReader<T = DataRecord> implements DataReader<T> {
   private schema?: SchemaValidator<T>;
 
   constructor(source: string | DataSource, options?: FixedWidthReaderOptions<T>) {
+    super();
     this.source = ensureDataSource(source);
     if (options) {
       this.schema = options.schema;

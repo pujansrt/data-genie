@@ -1,11 +1,12 @@
 import { DataReader, DataRecord, SqlConnection } from '@/core/interfaces';
 import { SchemaValidator } from '@/transformers/schema-validating-reader';
+import { BaseReader } from '@/core/base-reader';
 
 /**
  * SQLReader class for reading data records from a SQL database.
  * Like SQLWriter, it uses the SqlConnection interface to remain driver-agnostic.
  */
-export class SQLReader<T = DataRecord> implements DataReader<T> {
+export class SQLReader<T = DataRecord> extends BaseReader<T> {
   private dbClient: SqlConnection;
   private query: string;
   private params: any[];
@@ -15,6 +16,7 @@ export class SQLReader<T = DataRecord> implements DataReader<T> {
   private schema?: SchemaValidator<T>;
 
   constructor(dbClient: SqlConnection, query: string, params: any[] = [], options?: { schema?: SchemaValidator<T> }) {
+    super();
     if (!dbClient || typeof dbClient.query !== 'function') {
       throw new Error('A valid database client with a "query" method must be provided.');
     }

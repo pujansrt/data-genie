@@ -1,5 +1,6 @@
 import { DataReader, DataRecord } from '@/core/interfaces';
 import { SchemaValidator } from '@/transformers/schema-validating-reader';
+import { BaseReader } from '@/core/base-reader';
 
 export interface HttpReaderOptions<T = any> {
   method?: string;
@@ -26,12 +27,13 @@ export interface HttpReaderOptions<T = any> {
  * HttpReader class for streaming data from REST APIs.
  * Supports automated pagination and custom authentication headers.
  */
-export class HttpReader<T = DataRecord> implements DataReader<T> {
+export class HttpReader<T = DataRecord> extends BaseReader<T> {
   private url: string;
   private options: HttpReaderOptions<T>;
   private schema?: SchemaValidator<T>;
 
   constructor(url: string, options: HttpReaderOptions<T> = {}) {
+    super();
     this.url = url;
     this.options = {
       method: 'GET',

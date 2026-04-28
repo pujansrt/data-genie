@@ -29,6 +29,7 @@ export { FileSource, FileSink } from './core/file-transport';
 export { S3Source, S3Sink } from './core/s3-transport';
 export { HttpSource, HttpSink } from './core/http-transport';
 export { MemorySource, MemorySink } from './core/memory-transport';
+export { BaseReader } from './core/base-reader';
 
 export { GroupByReader } from './transformers/group-by-reader';
 export { TransformingReader } from './transformers/transforming-reader';

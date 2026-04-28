@@ -2,13 +2,14 @@ import { DataReader, DataRecord, DataSource } from '@/core/interfaces';
 import { ensureDataSource } from '@/core/transport-utils';
 import * as readline from 'readline';
 import { SchemaValidator } from '@/transformers/schema-validating-reader';
+import { BaseReader } from '@/core/base-reader';
 
 /**
  * NDJsonReader class for reading data records from a file in NDJSON (Newline Delimited JSON) format.
  * Each line in the file is expected to be a valid JSON object.
  * This class reads records incrementally, suitable for very large files.
  */
-export class NDJsonReader<T = DataRecord> implements DataReader<T> {
+export class NDJsonReader<T = DataRecord> extends BaseReader<T> {
   private source: DataSource;
   private schema?: SchemaValidator<T>;
 
@@ -17,6 +18,7 @@ export class NDJsonReader<T = DataRecord> implements DataReader<T> {
    * @param source The path to the NDJSON file or a DataSource.
    */
   constructor(source: string | DataSource, options?: { schema?: SchemaValidator<T> }) {
+    super();
     this.source = ensureDataSource(source);
     this.schema = options?.schema;
   }

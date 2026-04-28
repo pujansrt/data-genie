@@ -1,4 +1,4 @@
-import { DataReader, DataRecord, DataSource } from '@/core/interfaces';
+import { DataRecord, DataSource } from '@/core/interfaces';
 import { ensureDataSource } from '@/core/transport-utils';
 import { FileSource } from '@/core/file-transport';
 import * as fs from 'fs';
@@ -6,15 +6,17 @@ import * as path from 'path';
 import * as os from 'os';
 import { pipeline } from 'stream/promises';
 import { SchemaValidator } from '@/transformers/schema-validating-reader';
+import { BaseReader } from '@/core/base-reader';
 
 /**
  * ParquetReader reads data from Parquet files.
  */
-export class ParquetReader<T = DataRecord> implements DataReader<T> {
+export class ParquetReader<T = DataRecord> extends BaseReader<T> {
   private source: DataSource;
   private schema?: SchemaValidator<T>;
 
   constructor(source: string | DataSource, options?: { schema?: SchemaValidator<T> }) {
+    super();
     this.source = ensureDataSource(source);
     this.schema = options?.schema;
   }
