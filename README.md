@@ -191,7 +191,16 @@ await Job.run(reader, new JsonWriter('backup.json'));
 ```
 ---
 
+## Contributing
+
+Contributions are welcome! Whether it's adding a new DataReader, fixing a bug, or improving documentation.
+
+1.  Check out our [Contributing Guide](CONTRIBUTING.md).
+2.  Look for [Good First Issues](https://github.com/pujansrt/data-genie/issues?q=is%3Aopen+is%3Aissue+label%3A%22good+first+issue%22).
+3.  Submit a PR!
+
 ## Running Benchmarks
+
 
 Want to see the performance difference on your own machine? We provide a built-in benchmark script that compares Data-Genie with a standard `fs.readFileSync` approach.
 
