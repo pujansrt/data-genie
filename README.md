@@ -34,6 +34,14 @@ const writer = new JsonWriter('output.json');
 })();
 ```
 
+### Preview (Dry Run)
+Verify your transformations and filters instantly without writing any data.
+
+```typescript
+// Inspect the first 5 records in a beautiful console table
+await Job.preview(pipeline); 
+```
+
 ---
 
 ## Why Data-Genie? (Performance Benchmark)

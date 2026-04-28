@@ -66,4 +66,71 @@ describe('Job', () => {
     expect(mockLogger.info).toHaveBeenCalledWith(expect.stringContaining('Job Completed'));
     expect(mockWriter.close).toHaveBeenCalled();
   });
+
+  it('should handle showProgress', async () => {
+    const mockReader: DataReader = {
+      read: async function* () {
+        for (let i = 0; i < 1500; i++) yield { id: i };
+      }
+    };
+
+    const mockWriter: DataWriter = {
+      write: jest.fn().mockResolvedValue(undefined),
+      writeAll: jest.fn().mockResolvedValue(undefined),
+      close: jest.fn().mockResolvedValue(undefined),
+    };
+
+    const spyStdout = jest.spyOn(process.stdout, 'write').mockImplementation();
+    // Force isTTY to true for the test
+    const oldIsTTY = process.stdout.isTTY;
+    process.stdout.isTTY = true;
+
+    await Job.run(mockReader, mockWriter, { showProgress: true });
+
+    expect(spyStdout).toHaveBeenCalledWith(expect.stringContaining('⏳ Processing'));
+    expect(spyStdout).toHaveBeenCalledWith(expect.stringContaining('records'));
+
+    spyStdout.mockRestore();
+    process.stdout.isTTY = oldIsTTY;
+  });
+
+  it('should preview records without a writer', async () => {
+    const mockRecords = [{ id: 1 }, { id: 2 }, { id: 3 }];
+    const mockReader: DataReader = {
+      read: async function* () {
+        for (const r of mockRecords) yield r;
+      }
+    };
+
+    const mockLogger: Logger = {
+      info: jest.fn(),
+      warn: jest.fn(),
+      error: jest.fn(),
+    };
+
+    const spyTable = jest.spyOn(console, 'table').mockImplementation();
+
+    await Job.preview(mockReader, { limit: 2, logger: mockLogger });
+
+    expect(spyTable).toHaveBeenCalledWith([{ id: 1 }, { id: 2 }]);
+    expect(mockLogger.info).toHaveBeenCalledWith(expect.stringContaining('Previewing first 2 records'));
+    
+    spyTable.mockRestore();
+  });
+
+  it('should warn when no records are found in preview', async () => {
+    const mockReader: DataReader = {
+      read: async function* () { /* yield nothing */ }
+    };
+
+    const mockLogger: Logger = {
+      info: jest.fn(),
+      warn: jest.fn(),
+      error: jest.fn(),
+    };
+
+    await Job.preview(mockReader, { logger: mockLogger });
+
+    expect(mockLogger.warn).toHaveBeenCalledWith('No records found to preview.');
+  });
 });
