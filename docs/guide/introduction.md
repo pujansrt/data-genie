@@ -16,8 +16,8 @@ Traditional JavaScript methods like `fs.readFileSync` or `array.map` load the en
 
 ## Key Features
 
-- **🧞‍♂️ Streaming First**: O(1) memory complexity for all operations.
-- **🔌 Multi-Format**: CSV, TSV, JSON, NDJSON, Parquet, Excel, SQL.
-- **🚀 Transport Agnostic**: Local FS, S3, HTTP, Memory.
-- **🛡️ Type Safe**: Built with TypeScript and supports Zod for schema validation.
-- **🛠️ Fault Tolerant**: Built-in retries and Dead Letter Queue (DLQ) support.
+- **Streaming First**: O(1) memory complexity for all operations.
+- **Multi-Format**: CSV, TSV, JSON, NDJSON, Parquet, Excel, SQL.
+- **Transport Agnostic**: Local FS, S3, HTTP, Memory.
+- **Type Safe**: Built with TypeScript and supports Zod for schema validation.
+- **Fault Tolerant**: Built-in retries and Dead Letter Queue (DLQ) support.

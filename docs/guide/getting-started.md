@@ -48,6 +48,6 @@ import { CSVReader, Job } from '@pujansrt/data-genie';
 
 const reader = new CSVReader('large_data.csv');
 
-// Displays a beautiful table in your console
+// Displays a beautiful table in the console
 await Job.preview(reader, { limit: 5 });
 ```

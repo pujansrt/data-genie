@@ -38,7 +38,7 @@ import { CSVReader, ParquetWriter, S3Sink, Job } from '@pujansrt/data-genie';
 
 const writer = new ParquetWriter(new S3Sink(s3Client, 'my-bucket', 'exports/data.parquet'));
 
-// You must define the schema for Parquet
+// We must define the schema for Parquet
 writer.setSchema({
   name: { type: 'UTF8' },
   age: { type: 'INT64' },

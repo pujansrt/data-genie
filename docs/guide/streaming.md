@@ -19,7 +19,7 @@ If `huge_file.json` is 2GB and your server has 1GB of RAM, this will crash with 
 Data-Genie uses a "pull-based" streaming approach. It only reads enough data to create a single object, processes it through the pipeline, writes it to the destination, and then moves to the next one.
 
 ```typescript
-// ✅ Safe for any file size
+// Safe for any file size
 const reader = new JsonReader('huge_file.json');
 const writer = new JsonWriter('output.json');
 
