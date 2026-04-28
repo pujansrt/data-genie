@@ -1,16 +1,31 @@
 import { DataReader, DataRecord, DataSource } from '@/core/interfaces';
 import { ensureDataSource } from '@/core/transport-utils';
 import * as readline from 'readline';
+import { SchemaValidator } from '@/transformers/schema-validating-reader';
 
-export class FixedWidthReader implements DataReader {
+export interface FixedWidthReaderOptions<T> {
+  schema?: SchemaValidator<T>;
+  fieldWidths?: number[];
+  fieldNames?: string[];
+  hasFieldNamesInFirstRow?: boolean;
+}
+
+export class FixedWidthReader<T = DataRecord> implements DataReader<T> {
   private source: DataSource;
   private fieldWidths: number[] = [];
   private fieldNames: string[] = [];
   private hasFieldNamesInFirstRow = false;
   private initialized = false;
+  private schema?: SchemaValidator<T>;
 
-  constructor(source: string | DataSource) {
+  constructor(source: string | DataSource, options?: FixedWidthReaderOptions<T>) {
     this.source = ensureDataSource(source);
+    if (options) {
+      this.schema = options.schema;
+      if (options.fieldWidths) this.fieldWidths = options.fieldWidths;
+      if (options.fieldNames) this.fieldNames = options.fieldNames;
+      if (options.hasFieldNamesInFirstRow !== undefined) this.hasFieldNamesInFirstRow = options.hasFieldNamesInFirstRow;
+    }
   }
 
   public setFieldWidths(...widths: number[]): this {
@@ -28,7 +43,7 @@ export class FixedWidthReader implements DataReader {
     return this;
   }
 
-  public async *read(): AsyncIterableIterator<DataRecord> {
+  public async *read(): AsyncIterableIterator<T> {
     if (this.fieldWidths.length === 0) {
       throw new Error('Field widths must be defined before reading.');
     }
@@ -58,7 +73,11 @@ export class FixedWidthReader implements DataReader {
         record[this.fieldNames[i]] = values[i];
       }
 
-      yield record;
+      if (this.schema) {
+        yield this.schema.parse(record);
+      } else {
+        yield record as unknown as T;
+      }
     }
   }
 

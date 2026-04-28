@@ -1,21 +1,27 @@
 import { DataReader, DataRecord, DataSource } from '@/core/interfaces';
 import { ensureDataSource } from '@/core/transport-utils';
 import { parse } from 'csv-parse';
+import { SchemaValidator } from '@/transformers/schema-validating-reader';
 
 /**
  * TSVReader class for reading data records from a Tab-Separated Values (TSV) file.
  * It uses the 'csv-parse' library, configured specifically for tab delimiters.
  */
-export class TSVReader implements DataReader {
+export class TSVReader<T = DataRecord> implements DataReader<T> {
   private source: DataSource;
   private hasFieldNamesInFirstRow: boolean = true;
+  private schema?: SchemaValidator<T>;
 
   /**
    * Constructs a new TSVReader.
    * @param source The path to the TSV file or a DataSource.
    */
-  constructor(source: string | DataSource) {
+  constructor(source: string | DataSource, options?: { schema?: SchemaValidator<T>; hasFieldNamesInFirstRow?: boolean }) {
     this.source = ensureDataSource(source);
+    this.schema = options?.schema;
+    if (options?.hasFieldNamesInFirstRow !== undefined) {
+      this.hasFieldNamesInFirstRow = options.hasFieldNamesInFirstRow;
+    }
   }
 
   /**
@@ -34,7 +40,7 @@ export class TSVReader implements DataReader {
    * Reads data records from the TSV file asynchronously, yielding each record as it's parsed.
    * @returns An AsyncIterableIterator of DataRecord objects.
    */
-  public async *read(): AsyncIterableIterator<DataRecord> {
+  public async *read(): AsyncIterableIterator<T> {
     const stream = await this.source.getStream();
     const parser = stream.pipe(
       parse({
@@ -45,7 +51,11 @@ export class TSVReader implements DataReader {
     );
 
     for await (const record of parser) {
-      yield record;
+      if (this.schema) {
+        yield this.schema.parse(record);
+      } else {
+        yield record as T;
+      }
     }
   }
 }

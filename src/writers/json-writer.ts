@@ -2,7 +2,7 @@ import { Writable } from 'stream';
 import { DataWriter, DataRecord, DataSink } from '@/core/interfaces';
 import { ensureDataSink } from '@/core/transport-utils';
 
-export class JsonWriter implements DataWriter {
+export class JsonWriter<T = DataRecord> implements DataWriter<T> {
   private sink: DataSink;
   private outputStream?: Writable;
   private firstRecord: boolean = true;
@@ -23,7 +23,7 @@ export class JsonWriter implements DataWriter {
     });
   }
 
-  public async write(record: DataRecord): Promise<void> {
+  public async write(record: T): Promise<void> {
     if (this.isClosed) throw new Error('Writer is already closed');
     await this.initializeStream();
 
@@ -38,7 +38,7 @@ export class JsonWriter implements DataWriter {
     });
   }
 
-  public async writeAll(records: AsyncIterableIterator<DataRecord>): Promise<void> {
+  public async writeAll(records: AsyncIterableIterator<T>): Promise<void> {
     for await (const record of records) {
       await this.write(record);
     }

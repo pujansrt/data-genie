@@ -23,9 +23,9 @@ export interface JobOptions {
 export class Job {
   private static defaultLogger = new ConsoleLogger();
 
-  public static async run(
-    reader: DataReader, 
-    writer: DataWriter, 
+  public static async run<T = DataRecord>(
+    reader: DataReader<T>, 
+    writer: DataWriter<T>, 
     options: JobOptions = {}
   ): Promise<JobMetrics> {
     const logger = options.logger || this.defaultLogger;
@@ -80,13 +80,13 @@ export class Job {
    * Previews the first N records of a stream without writing them to a destination.
    * Useful for verifying transformations and filters before running a full job.
    */
-  public static async preview(
-    reader: DataReader,
+  public static async preview<T = DataRecord>(
+    reader: DataReader<T>,
     options: { limit?: number; logger?: Logger } = {}
   ): Promise<void> {
     const logger = options.logger || this.defaultLogger;
     const limit = options.limit || 5;
-    const previewRecords: DataRecord[] = [];
+    const previewRecords: T[] = [];
     let count = 0;
 
     logger.info(`--- Previewing first ${limit} records ---`);

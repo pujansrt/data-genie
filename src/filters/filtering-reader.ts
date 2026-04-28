@@ -1,21 +1,21 @@
 import { DataReader, DataRecord } from '@/core/interfaces';
 import { DataTransformer } from '@/transformers/transformers';
 
-export type RecordFilterRule = (record: DataRecord) => boolean;
+export type RecordFilterRule<T = any> = (record: T) => boolean;
 
-export class FilteringReader extends DataTransformer {
-  private rules: RecordFilterRule[] = [];
+export class FilteringReader<T = DataRecord> extends DataTransformer<T, T> {
+  private rules: RecordFilterRule<T>[] = [];
 
-  constructor(reader: DataReader) {
+  constructor(reader: DataReader<T>) {
     super(reader);
   }
 
-  public add(rule: RecordFilterRule): this {
+  public add(rule: RecordFilterRule<T>): this {
     this.rules.push(rule);
     return this;
   }
 
-  public async *read(): AsyncIterableIterator<DataRecord> {
+  public async *read(): AsyncIterableIterator<T> {
     for await (const record of this.reader.read()) {
       let passedAllRules = true;
       for (const rule of this.rules) {

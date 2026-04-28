@@ -1,14 +1,27 @@
 import { parse } from 'csv-parse';
 import { DataReader, DataRecord, DataSource } from '@/core/interfaces';
 import { ensureDataSource } from '@/core/transport-utils';
+import { SchemaValidator } from '@/transformers/schema-validating-reader';
 
-export class CSVReader implements DataReader {
+export interface CSVReaderOptions<T> {
+  schema?: SchemaValidator<T>;
+  hasFieldNamesInFirstRow?: boolean;
+  delimiter?: string;
+}
+
+export class CSVReader<T = DataRecord> implements DataReader<T> {
   private source: DataSource;
   private hasFieldNamesInFirstRow: boolean = true;
   private fieldSeparator: string = ',';
+  private schema?: SchemaValidator<T>;
 
-  constructor(source: string | DataSource) {
+  constructor(source: string | DataSource, options?: CSVReaderOptions<T>) {
     this.source = ensureDataSource(source);
+    if (options) {
+      this.schema = options.schema;
+      if (options.hasFieldNamesInFirstRow !== undefined) this.hasFieldNamesInFirstRow = options.hasFieldNamesInFirstRow;
+      if (options.delimiter !== undefined) this.fieldSeparator = options.delimiter;
+    }
   }
 
   public setFieldNamesInFirstRow(value: boolean): this {
@@ -21,7 +34,7 @@ export class CSVReader implements DataReader {
     return this;
   }
 
-  public async *read(): AsyncIterableIterator<DataRecord> {
+  public async *read(): AsyncIterableIterator<T> {
     const stream = await this.source.getStream();
 
     const parser = stream.pipe(
@@ -33,7 +46,11 @@ export class CSVReader implements DataReader {
     );
 
     for await (const record of parser) {
-      yield record;
+      if (this.schema) {
+        yield this.schema.parse(record);
+      } else {
+        yield record as T;
+      }
     }
   }
 }

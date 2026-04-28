@@ -10,7 +10,7 @@ import { pipeline } from 'stream/promises';
  * ParquetWriter writes data records to a Parquet file.
  * Requires a schema definition.
  */
-export class ParquetWriter implements DataWriter {
+export class ParquetWriter<T = DataRecord> implements DataWriter<T> {
   private sink: DataSink;
   private writer: any;
   private schemaConfig: any;
@@ -45,12 +45,12 @@ export class ParquetWriter implements DataWriter {
     }
   }
 
-  public async write(record: DataRecord): Promise<void> {
+  public async write(record: T): Promise<void> {
     await this.initialize();
     await this.writer.appendRow(record);
   }
 
-  public async writeAll(records: AsyncIterableIterator<DataRecord>): Promise<void> {
+  public async writeAll(records: AsyncIterableIterator<T>): Promise<void> {
     for await (const record of records) {
       await this.write(record);
     }

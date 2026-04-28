@@ -1,21 +1,24 @@
 import { DataReader, DataRecord, DataSource } from '@/core/interfaces';
 import { ensureDataSource } from '@/core/transport-utils';
 import * as readline from 'readline';
+import { SchemaValidator } from '@/transformers/schema-validating-reader';
 
 /**
  * NDJsonReader class for reading data records from a file in NDJSON (Newline Delimited JSON) format.
  * Each line in the file is expected to be a valid JSON object.
  * This class reads records incrementally, suitable for very large files.
  */
-export class NDJsonReader implements DataReader {
+export class NDJsonReader<T = DataRecord> implements DataReader<T> {
   private source: DataSource;
+  private schema?: SchemaValidator<T>;
 
   /**
    * Constructs a new NDJsonReader.
    * @param source The path to the NDJSON file or a DataSource.
    */
-  constructor(source: string | DataSource) {
+  constructor(source: string | DataSource, options?: { schema?: SchemaValidator<T> }) {
     this.source = ensureDataSource(source);
+    this.schema = options?.schema;
   }
 
   /**
@@ -31,7 +34,7 @@ export class NDJsonReader implements DataReader {
    * Reads data records from the NDJSON file asynchronously, yielding each record as it's parsed.
    * @returns An AsyncIterableIterator of DataRecord objects.
    */
-  public async *read(): AsyncIterableIterator<DataRecord> {
+  public async *read(): AsyncIterableIterator<T> {
     const stream = await this.source.getStream();
     const rl = readline.createInterface({
       input: stream,
@@ -46,8 +49,12 @@ export class NDJsonReader implements DataReader {
 
       try {
         // Parse each non-empty line as a JSON object
-        const record: DataRecord = JSON.parse(line);
-        yield record;
+        const record = JSON.parse(line);
+        if (this.schema) {
+          yield this.schema.parse(record);
+        } else {
+          yield record as T;
+        }
       } catch (error) {
         // Log an error or throw if a line cannot be parsed as valid JSON
         console.error(`NDJsonReader: Error parsing JSON line from ${this.source.name()}: "${line.substring(0, 100)}..."`, error);

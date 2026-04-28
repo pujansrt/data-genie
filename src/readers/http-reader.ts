@@ -1,6 +1,7 @@
 import { DataReader, DataRecord } from '@/core/interfaces';
+import { SchemaValidator } from '@/transformers/schema-validating-reader';
 
-export interface HttpReaderOptions {
+export interface HttpReaderOptions<T = any> {
   method?: string;
   headers?: Record<string, string>;
   body?: any;
@@ -15,26 +16,32 @@ export interface HttpReaderOptions {
    * Return null to stop pagination.
    */
   nextPageUrl?: (response: any, currentUrl: string) => string | null;
+  /**
+   * Optional schema for validation and type inference.
+   */
+  schema?: SchemaValidator<T>;
 }
 
 /**
  * HttpReader class for streaming data from REST APIs.
  * Supports automated pagination and custom authentication headers.
  */
-export class HttpReader implements DataReader {
+export class HttpReader<T = DataRecord> implements DataReader<T> {
   private url: string;
-  private options: HttpReaderOptions;
+  private options: HttpReaderOptions<T>;
+  private schema?: SchemaValidator<T>;
 
-  constructor(url: string, options: HttpReaderOptions = {}) {
+  constructor(url: string, options: HttpReaderOptions<T> = {}) {
     this.url = url;
     this.options = {
       method: 'GET',
       resultsPath: (res) => (Array.isArray(res) ? res : res.data || res.items || []),
       ...options,
     };
+    this.schema = options.schema;
   }
 
-  public async *read(): AsyncIterableIterator<DataRecord> {
+  public async *read(): AsyncIterableIterator<T> {
     let currentUrl: string | null = this.url;
 
     while (currentUrl) {
@@ -60,7 +67,11 @@ export class HttpReader implements DataReader {
       }
 
       for (const record of records) {
-        yield record;
+        if (this.schema) {
+          yield this.schema.parse(record);
+        } else {
+          yield record as T;
+        }
       }
 
       // Pagination logic

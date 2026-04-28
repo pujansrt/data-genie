@@ -4,25 +4,25 @@ import { DataTransformer } from '@/transformers/transformers';
 /**
  * A generic interface for schema validators (can be Zod, Joi, etc.)
  */
-export interface SchemaValidator {
-  parse(data: unknown): any;
+export interface SchemaValidator<T = any> {
+  parse(data: unknown): T;
 }
 
-export class SchemaValidatingReader extends DataTransformer {
-  private schema: SchemaValidator;
-  private dlqWriter?: DataWriter;
+export class SchemaValidatingReader<TOut = DataRecord, TIn = any> extends DataTransformer<TOut, TIn> {
+  private schema: SchemaValidator<TOut>;
+  private dlqWriter?: DataWriter<any>;
 
-  constructor(reader: DataReader, schema: SchemaValidator) {
+  constructor(reader: DataReader<TIn>, schema: SchemaValidator<TOut>) {
     super(reader);
     this.schema = schema;
   }
 
-  public setDLQ(writer: DataWriter): this {
+  public setDLQ(writer: DataWriter<any>): this {
     this.dlqWriter = writer;
     return this;
   }
 
-  public async *read(): AsyncIterableIterator<DataRecord> {
+  public async *read(): AsyncIterableIterator<TOut> {
     for await (const record of this.reader.read()) {
       try {
         // Validate and transform (e.g., cast strings to numbers)

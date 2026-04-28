@@ -1,27 +1,31 @@
 import { DataReader, DataRecord, DataSource } from '@/core/interfaces';
 import { ensureDataSource } from '@/core/transport-utils';
 import { FileSource } from '@/core/file-transport';
+import { SchemaValidator } from '@/transformers/schema-validating-reader';
 
-export interface XlsxReaderOptions {
+export interface XlsxReaderOptions<T = any> {
   sheetName?: string;
   sheetIndex?: number;
   hasFieldNamesInFirstRow?: boolean;
+  schema?: SchemaValidator<T>;
 }
 
-export class XlsxReader implements DataReader {
+export class XlsxReader<T = DataRecord> implements DataReader<T> {
   private source: DataSource;
-  private options: XlsxReaderOptions;
+  private options: XlsxReaderOptions<T>;
+  private schema?: SchemaValidator<T>;
 
-  constructor(source: string | DataSource, options: XlsxReaderOptions = {}) {
+  constructor(source: string | DataSource, options: XlsxReaderOptions<T> = {}) {
     this.source = ensureDataSource(source);
     this.options = {
       sheetIndex: 1,
       hasFieldNamesInFirstRow: true,
       ...options
     };
+    this.schema = options.schema;
   }
 
-  public async *read(): AsyncIterableIterator<DataRecord> {
+  public async *read(): AsyncIterableIterator<T> {
     let ExcelJS;
     try {
       ExcelJS = await import('exceljs');
@@ -47,46 +51,27 @@ export class XlsxReader implements DataReader {
     if (!worksheet) return;
 
     let fieldNames: string[] = [];
-    worksheet.eachRow((row, rowNumber) => {
-        const values = Array.isArray(row.values) ? row.values.slice(1) : [];
-        
-        if (rowNumber === 1 && this.options.hasFieldNamesInFirstRow) {
-            fieldNames = values.map(v => String(v));
-            return;
-        }
+    if (this.options.hasFieldNamesInFirstRow) {
+        const firstRow = worksheet.getRow(1);
+        fieldNames = (Array.isArray(firstRow.values) ? firstRow.values.slice(1) : []).map(v => String(v));
+    }
 
-        const record: DataRecord = {};
-        if (fieldNames.length > 0) {
-            fieldNames.forEach((name, index) => {
-                record[name] = values[index];
-            });
-        } else {
-            values.forEach((val, index) => {
-                record[`col${index + 1}`] = val;
-            });
-        }
-        // Since eachRow is not async-friendly for yielding in a generator,
-        // we'll use a standard for loop if possible or collect.
-    });
-
-    // Actually, for a truly streaming reader in ExcelJS, we use the Worksheet events.
-    // Given the complexity of ExcelJS's streaming reader, a simpler way is:
     for (let i = (this.options.hasFieldNamesInFirstRow ? 2 : 1); i <= worksheet.rowCount; i++) {
         const row = worksheet.getRow(i);
         const values = Array.isArray(row.values) ? row.values.slice(1) : [];
         const record: DataRecord = {};
         
-        if (this.options.hasFieldNamesInFirstRow && fieldNames.length === 0) {
-            const firstRow = worksheet.getRow(1);
-            fieldNames = (Array.isArray(firstRow.values) ? firstRow.values.slice(1) : []).map(v => String(v));
-        }
-
         if (fieldNames.length > 0) {
             fieldNames.forEach((name, index) => { record[name] = values[index]; });
         } else {
             values.forEach((val, index) => { record[`col${index + 1}`] = val; });
         }
-        yield record;
+
+        if (this.schema) {
+            yield this.schema.parse(record);
+        } else {
+            yield record as unknown as T;
+        }
     }
   }
 }

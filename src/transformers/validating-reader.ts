@@ -1,26 +1,26 @@
 import { DataReader, DataRecord, DataWriter } from '@/core/interfaces';
 import { DataTransformer } from '@/transformers/transformers';
 
-export interface ValidationMessage {
-  record: DataRecord;
+export interface ValidationMessage<T = DataRecord> {
+  record: T;
   field?: string;
   message: string;
 }
 
-export type RecordValidationRule = (record: DataRecord, messages: ValidationMessage[]) => boolean;
+export type RecordValidationRule<T = DataRecord> = (record: T, messages: ValidationMessage<T>[]) => boolean;
 
-export class ValidatingReader extends DataTransformer {
-  private rules: RecordValidationRule[] = [];
-  private messages: ValidationMessage[] = [];
+export class ValidatingReader<T = DataRecord> extends DataTransformer<T, T> {
+  private rules: RecordValidationRule<T>[] = [];
+  private messages: ValidationMessage<T>[] = [];
   private throwExceptionOnFailure: boolean = false;
   private recordStackTraceInMessage: boolean = false;
-  private dlqWriter?: DataWriter;
+  private dlqWriter?: DataWriter<any>;
 
-  constructor(reader: DataReader) {
+  constructor(reader: DataReader<T>) {
     super(reader);
   }
 
-  public add(rule: RecordValidationRule): this {
+  public add(rule: RecordValidationRule<T>): this {
     this.rules.push(rule);
     return this;
   }
@@ -34,16 +34,16 @@ export class ValidatingReader extends DataTransformer {
    * Sets a DataWriter to act as a Dead Letter Queue (DLQ).
    * Invalid records will be written here instead of being yielded.
    */
-  public setDLQ(writer: DataWriter): this {
+  public setDLQ(writer: DataWriter<any>): this {
     this.dlqWriter = writer;
     return this;
   }
 
-  public async *read(): AsyncIterableIterator<DataRecord> {
+  public async *read(): AsyncIterableIterator<T> {
     try {
       for await (const record of this.reader.read()) {
         let isValid = true;
-        const recordMessages: ValidationMessage[] = [];
+        const recordMessages: ValidationMessage<T>[] = [];
 
         for (const rule of this.rules) {
           if (!rule(record, recordMessages)) {
@@ -61,7 +61,7 @@ export class ValidatingReader extends DataTransformer {
           if (this.dlqWriter) {
             // Divert to DLQ and do NOT yield to the main pipeline
             await this.dlqWriter.write({
-              ...record,
+              ...(record as any),
               _errors: recordMessages.map((m) => m.message)
             });
             continue; 
@@ -77,23 +77,23 @@ export class ValidatingReader extends DataTransformer {
     }
   }
 
-  public getMessages(): ValidationMessage[] {
+  public getMessages(): ValidationMessage<T>[] {
     return this.messages;
   }
 }
 
-export class FieldValidator {
-  private fieldName: string;
-  private rules: ((value: any, messages: ValidationMessage[]) => boolean)[] = [];
+export class FieldValidator<T = DataRecord> {
+  private fieldName: keyof T;
+  private rules: ((value: any, messages: ValidationMessage<T>[]) => boolean)[] = [];
 
-  constructor(fieldName: string) {
+  constructor(fieldName: keyof T) {
     this.fieldName = fieldName;
   }
 
   public addRule(rule: (value: any) => boolean, errorMessage: string): this {
-    this.rules.push((value: any, messages: ValidationMessage[]) => {
+    this.rules.push((value: any, messages: ValidationMessage<T>[]) => {
       if (!rule(value)) {
-        messages.push({ record: {}, field: this.fieldName, message: errorMessage });
+        messages.push({ record: {} as T, field: this.fieldName as string, message: errorMessage });
         return false;
       }
       return true;
@@ -101,8 +101,8 @@ export class FieldValidator {
     return this;
   }
 
-  public createRecordValidationRule(): RecordValidationRule {
-    return (record: DataRecord, messages: ValidationMessage[]) => {
+  public createRecordValidationRule(): RecordValidationRule<T> {
+    return (record: T, messages: ValidationMessage<T>[]) => {
       const value = record[this.fieldName];
       let isValid = true;
       for (const rule of this.rules) {

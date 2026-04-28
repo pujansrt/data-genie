@@ -1,13 +1,13 @@
 import { DataRecord, DataWriter } from '@/core/interfaces';
 
-export class ConsoleWriter implements DataWriter {
-  public async write(record: DataRecord): Promise<void> {
+export class ConsoleWriter<T = DataRecord> implements DataWriter<T> {
+  public async write(record: T): Promise<void> {
     console.log(JSON.stringify(record));
   }
 
-  public async writeAll(records: AsyncIterableIterator<DataRecord>): Promise<void> {
+  public async writeAll(records: AsyncIterableIterator<T>): Promise<void> {
     for await (const record of records) {
-      console.log(JSON.stringify(record));
+      await this.write(record);
     }
   }
 

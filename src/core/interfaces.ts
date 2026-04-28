@@ -20,14 +20,14 @@ export interface DataSink {
   name(): string;
 }
 
-export interface DataReader {
-  read(): AsyncIterableIterator<DataRecord>; // Use async iterators for streaming
+export interface DataReader<T = DataRecord> {
+  read(): AsyncIterableIterator<T>; // Use async iterators for streaming
   // Potentially methods like close(), getFieldNames()
 }
 
-export interface DataWriter {
-  write(record: DataRecord): Promise<void>;
-  writeAll(records: AsyncIterableIterator<DataRecord>): Promise<void>;
+export interface DataWriter<T = DataRecord> {
+  write(record: T): Promise<void>;
+  writeAll(records: AsyncIterableIterator<T>): Promise<void>;
   close(): Promise<void>;
 }
 

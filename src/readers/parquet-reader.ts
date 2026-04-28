@@ -5,18 +5,21 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
 import { pipeline } from 'stream/promises';
+import { SchemaValidator } from '@/transformers/schema-validating-reader';
 
 /**
  * ParquetReader reads data from Parquet files.
  */
-export class ParquetReader implements DataReader {
+export class ParquetReader<T = DataRecord> implements DataReader<T> {
   private source: DataSource;
+  private schema?: SchemaValidator<T>;
 
-  constructor(source: string | DataSource) {
+  constructor(source: string | DataSource, options?: { schema?: SchemaValidator<T> }) {
     this.source = ensureDataSource(source);
+    this.schema = options?.schema;
   }
 
-  public async *read(): AsyncIterableIterator<DataRecord> {
+  public async *read(): AsyncIterableIterator<T> {
     let parquet;
     try {
       const module = await import('parquetjs-lite');
@@ -42,7 +45,11 @@ export class ParquetReader implements DataReader {
       const cursor = reader.getCursor();
       let record = null;
       while (record = await cursor.next()) {
-        yield record;
+        if (this.schema) {
+          yield this.schema.parse(record);
+        } else {
+          yield record as T;
+        }
       }
 
       await reader.close();

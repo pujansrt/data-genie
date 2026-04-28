@@ -3,7 +3,7 @@ import { DataWriter, DataRecord, DataSink } from '@/core/interfaces';
 import { Writable } from 'stream';
 import { ensureDataSink } from '@/core/transport-utils';
 
-export class CSVWriter implements DataWriter {
+export class CSVWriter<T = DataRecord> implements DataWriter<T> {
   private sink: DataSink;
   private fieldNames: string[] = [];
   private headerWritten: boolean = false;
@@ -26,16 +26,16 @@ export class CSVWriter implements DataWriter {
     this.stringifier.pipe(this.outputStream);
   }
 
-  public async write(record: DataRecord): Promise<void> {
+  public async write(record: T): Promise<void> {
     await this.initializeStream();
 
     if (!this.headerWritten && this.fieldNames.length === 0) {
-      this.fieldNames = Object.keys(record);
+      this.fieldNames = Object.keys(record as any);
       this.stringifier.write(this.fieldNames);
       this.headerWritten = true;
     }
 
-    const recordArray = this.fieldNames.map((fieldName) => record[fieldName]);
+    const recordArray = this.fieldNames.map((fieldName) => (record as any)[fieldName]);
     const canWrite = this.stringifier.write(recordArray);
 
     if (!canWrite) {
@@ -43,7 +43,7 @@ export class CSVWriter implements DataWriter {
     }
   }
 
-  public async writeAll(records: AsyncIterableIterator<DataRecord>): Promise<void> {
+  public async writeAll(records: AsyncIterableIterator<T>): Promise<void> {
     for await (const record of records) {
       await this.write(record);
     }
