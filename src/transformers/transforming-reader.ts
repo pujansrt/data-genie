@@ -11,9 +11,9 @@ export class TransformingReader<TIn = DataRecord, TOut = TIn> extends DataTransf
     super(reader);
   }
 
-  public add<TNewOut = TOut>(transformation: RecordTransformation<TOut, TNewOut>): TransformingReader<TIn, TNewOut> {
+  public add<TNewOut>(transformation: RecordTransformation<TOut, TNewOut>): TransformingReader<TIn, TNewOut> {
     this.transformations.push(transformation);
-    return this as any;
+    return this as unknown as TransformingReader<TIn, TNewOut>;
   }
 
   public setCondition(condition: (record: TIn) => boolean): this {

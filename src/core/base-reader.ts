@@ -1,6 +1,7 @@
-import { DataReader, DataRecord } from './interfaces';
+import { DataReader, DataRecord, DataWriter } from './interfaces';
 import { RecordTransformation } from '@/transformers/transforming-reader';
 import { SchemaValidator } from '@/transformers/schema-validating-reader';
+import { Job, JobMetrics, JobOptions } from './job';
 
 /**
  * BaseReader provides a common foundation for all readers, 
@@ -12,10 +13,7 @@ export abstract class BaseReader<T = DataRecord> implements DataReader<T> {
   /**
    * Chains a transformation to this reader.
    */
-  public transform<TOut>(fn: RecordTransformation<T, TOut>): DataReader<TOut> {
-    // We import TransformingReader dynamically or here if we don't mind the dependency
-    // To avoid circular dependencies at the top level, we can use a factory or dynamic import
-    // But for now, let's see if we can just use the classes directly.
+  public transform<TOut>(fn: RecordTransformation<T, TOut>): BaseReader<TOut> {
     const { TransformingReader } = require('@/transformers/transforming-reader');
     return new TransformingReader(this).add(fn);
   }
@@ -23,8 +21,24 @@ export abstract class BaseReader<T = DataRecord> implements DataReader<T> {
   /**
    * Chains a schema validation to this reader.
    */
-  public validate<TOut>(schema: SchemaValidator<TOut>): DataReader<TOut> {
+  public validate<TOut>(schema: SchemaValidator<TOut>): BaseReader<TOut> {
     const { SchemaValidatingReader } = require('@/transformers/schema-validating-reader');
     return new SchemaValidatingReader(this, schema);
+  }
+
+  /**
+   * Runs a job by writing the contents of this reader to the provided writer.
+   */
+  public async write(writer: DataWriter<T>, options?: JobOptions): Promise<JobMetrics> {
+    return Job.run(this, writer, options);
+  }
+
+  /**
+   * Runs a job using a callback function for every record.
+   * Provides full type inference for the record.
+   */
+  public async writeToCallback(callback: (record: T) => Promise<void> | void, options?: JobOptions): Promise<JobMetrics> {
+    const { CallbackWriter } = require('@/writers/callback-writer');
+    return Job.run(this, new CallbackWriter(callback), options);
   }
 }
