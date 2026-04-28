@@ -21,6 +21,8 @@ export { MultiWriter } from './writers/multi-writer';
 export { XlsxWriter } from './writers/xlsx-writer';
 export { MemoryWriter } from './writers/memory-writer';
 export { ParquetWriter } from './writers/parquet-writer';
+export { CallbackWriter } from './writers/callback-writer';
+export { BatchCallbackWriter } from './writers/batch-callback-writer';
 
 // Transports
 export { FileSource, FileSink } from './core/file-transport';

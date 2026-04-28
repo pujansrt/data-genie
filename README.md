@@ -60,7 +60,7 @@ Most ETL tools fail when processing files larger than the available RAM. Data-Ge
 ## Architecture Overview
 
 ```mermaid
-graph LR
+graph TD
     subgraph Sources [Data Sources]
         direction TB
         S1[CSV / TSV / FixedWidth]
@@ -76,6 +76,7 @@ graph LR
             T[Transform / Filter]
             V[Validate]
             C[Custom Function]
+            CB[Callback RowByRow/Batch]
         end
         W[DataWriter]
     end
@@ -188,6 +189,21 @@ const source = new HttpSource('https://api.example.com/data.json');
 const reader = new JsonReader(source);
 
 await Job.run(reader, new JsonWriter('backup.json'));
+```
+
+### 7. Custom Callbacks & Batching (RabbitMQ / DB)
+Push data to external queues or perform bulk database inserts efficiently.
+
+```typescript
+// Push to RabbitMQ row-by-row
+const rabbitWriter = new CallbackWriter(async (row) => {
+    await queue.publish('data-events', row);
+});
+
+// Bulk insert into DB in batches of 100
+const dbWriter = new BatchCallbackWriter(100, async (batch) => {
+    await db.table('users').insert(batch);
+});
 ```
 ---
 

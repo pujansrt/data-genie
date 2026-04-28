@@ -12,7 +12,7 @@ First off, thank you for considering contributing to Data-Genie! It's people lik
 * Explain why the feature would be useful to most users.
 
 ### Pull Requests
-1. Fork the repo and create your branch from `main`.
+1. Fork the repo and create your branch from `production`.
 2. If you've added code that should be tested, add tests.
 3. Ensure the test suite passes (`npm test`).
 4. Format your code with Prettier (`npm run format` if available).
