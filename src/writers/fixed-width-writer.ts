@@ -64,7 +64,10 @@ export class FixedWidthWriter implements DataWriter {
 
     if (this.hasFieldNamesInFirstRow && !this.headerWritten) {
       const headerLine = this.fieldNames.map((name, index) => this.formatField(name, this.fieldWidths[index])).join('');
-      this.outputStream!.write(headerLine + '\n');
+      const canWrite = this.outputStream!.write(headerLine + '\n');
+      if (!canWrite) {
+        await new Promise((resolve) => this.outputStream!.once('drain', resolve));
+      }
       this.headerWritten = true;
     }
 
@@ -75,12 +78,10 @@ export class FixedWidthWriter implements DataWriter {
       })
       .join('');
 
-    return new Promise((resolve, reject) => {
-      this.outputStream!.write(dataLine + '\n', (error) => {
-        if (error) reject(error);
-        else resolve();
-      });
-    });
+    const canWrite = this.outputStream!.write(dataLine + '\n');
+    if (!canWrite) {
+      await new Promise((resolve) => this.outputStream!.once('drain', resolve));
+    }
   }
 
   public async writeAll(records: AsyncIterableIterator<DataRecord>): Promise<void> {

@@ -30,12 +30,12 @@ export class JsonWriter<T = DataRecord> implements DataWriter<T> {
     const prefix = this.firstRecord ? '  ' : ',\n  ';
     this.firstRecord = false;
 
-    return new Promise((resolve, reject) => {
-      this.outputStream!.write(prefix + JSON.stringify(record, null, 2).replace(/\n/g, '\n  '), (err) => {
-        if (err) reject(err);
-        else resolve();
-      });
-    });
+    const data = prefix + JSON.stringify(record, null, 2).replace(/\n/g, '\n  ');
+    const canWrite = this.outputStream!.write(data);
+
+    if (!canWrite) {
+      await new Promise((resolve) => this.outputStream!.once('drain', resolve));
+    }
   }
 
   public async writeAll(records: AsyncIterableIterator<T>): Promise<void> {
@@ -51,20 +51,18 @@ export class JsonWriter<T = DataRecord> implements DataWriter<T> {
     // If no records were written, we still need to open the stream to write []
     if (!this.outputStream) {
         this.outputStream = await this.sink.getStream();
-        return new Promise((resolve, reject) => {
-            this.outputStream!.write('[]', (err) => {
-                if (err) return reject(err);
-                this.finalize(resolve, reject);
-            });
-        });
+        const canWrite = this.outputStream!.write('[]');
+        if (!canWrite) {
+            await new Promise((resolve) => this.outputStream!.once('drain', resolve));
+        }
+        return new Promise((resolve, reject) => this.finalize(resolve, reject));
     }
 
-    return new Promise((resolve, reject) => {
-      this.outputStream!.write('\n]', (err) => {
-        if (err) return reject(err);
-        this.finalize(resolve, reject);
-      });
-    });
+    const canWrite = this.outputStream!.write('\n]');
+    if (!canWrite) {
+        await new Promise((resolve) => this.outputStream!.once('drain', resolve));
+    }
+    return new Promise((resolve, reject) => this.finalize(resolve, reject));
   }
 
   private finalize(resolve: () => void, reject: (err: any) => void): void {

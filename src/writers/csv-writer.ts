@@ -36,10 +36,11 @@ export class CSVWriter<T = DataRecord> implements DataWriter<T> {
     }
 
     const recordArray = this.fieldNames.map((fieldName) => (record as any)[fieldName]);
-    const canWrite = this.stringifier.write(recordArray);
+    this.stringifier.write(recordArray);
 
-    if (!canWrite) {
-      await new Promise((resolve) => this.stringifier.once('drain', resolve));
+    // If the output stream is full, we must wait, regardless of what the stringifier says
+    if (this.outputStream && (this.outputStream as any).writableLength > this.outputStream.writableHighWaterMark) {
+        await new Promise((resolve) => this.outputStream!.once('drain', resolve));
     }
   }
 

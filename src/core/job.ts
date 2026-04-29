@@ -60,17 +60,20 @@ export class Job<T = DataRecord> extends EventEmitter {
           
           this.emit('record', record);
 
-          if (showProgress && (recordCount % 1000 === 0 || Date.now() - lastUpdate > 200)) {
+          // Always check progress intervals to emit events, even if showProgress is false
+          if (recordCount % 1000 === 0 || Date.now() - lastUpdate > 200) {
             const now = Date.now();
             const currentMetrics = this.calculateMetrics(startTime, new Date(now), recordCount);
             
             this.emit('progress', currentMetrics);
 
-            const rps = currentMetrics.recordsPerSecond;
-            const elapsed = currentMetrics.durationMs / 1000;
-            process.stdout.write(
-              `\r⏳ Processing: ${recordCount.toLocaleString()} records | ${rps.toFixed(0)} rec/sec | ${elapsed.toFixed(1)}s elapsed`
-            );
+            if (showProgress) {
+              const rps = currentMetrics.recordsPerSecond;
+              const elapsed = currentMetrics.durationMs / 1000;
+              process.stdout.write(
+                `\r⏳ Processing: ${recordCount.toLocaleString()} records | ${rps.toFixed(0)} rec/sec | ${elapsed.toFixed(1)}s elapsed`
+              );
+            }
             lastUpdate = now;
           }
         } catch (error) {
@@ -88,7 +91,7 @@ export class Job<T = DataRecord> extends EventEmitter {
     const endTime = new Date();
     const metrics = this.calculateMetrics(startTime, endTime, recordCount);
 
-    logger.info(`--- Job Completed ---`);
+    logger.info(`\n--- Job Completed ---`);
     logger.info(`Processed: ${recordCount} records`);
     logger.info(`Duration:  ${(metrics.durationMs / 1000).toFixed(2)}s`);
     logger.info(`Throughput: ${metrics.recordsPerSecond.toFixed(2)} rec/sec`);

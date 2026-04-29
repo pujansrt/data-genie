@@ -35,13 +35,11 @@ export class TSVWriter implements DataWriter {
     await this.writeLine(row);
   }
 
-  private writeLine(line: string): Promise<void> {
-    return new Promise((resolve, reject) => {
-      this.outputStream!.write(line + '\n', (err) => {
-        if (err) reject(err);
-        else resolve();
-      });
-    });
+  private async writeLine(line: string): Promise<void> {
+    const canWrite = this.outputStream!.write(line + '\n');
+    if (!canWrite) {
+      await new Promise((resolve) => this.outputStream!.once('drain', resolve));
+    }
   }
 
   public async writeAll(records: AsyncIterableIterator<DataRecord>): Promise<void> {

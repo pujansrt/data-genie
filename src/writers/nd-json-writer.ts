@@ -18,12 +18,11 @@ export class NDJsonWriter implements DataWriter {
   public async write(record: DataRecord): Promise<void> {
     await this.initializeStream();
     const jsonLine = JSON.stringify(record) + '\n';
-    return new Promise((resolve, reject) => {
-      this.outputStream!.write(jsonLine, (error) => {
-        if (error) reject(error);
-        else resolve();
-      });
-    });
+    const canWrite = this.outputStream!.write(jsonLine);
+    
+    if (!canWrite) {
+      await new Promise((resolve) => this.outputStream!.once('drain', resolve));
+    }
   }
 
   public async writeAll(records: AsyncIterableIterator<DataRecord>): Promise<void> {
