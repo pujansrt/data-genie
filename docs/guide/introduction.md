@@ -1,8 +1,10 @@
 # What is Data-Genie?
 
-Data-Genie is a high-performant, streaming-first **ETL (Extract, Transform, Load) Engine** written in **TypeScript**.
+Data-Genie is a high-performant, streaming-first **ETL (Extract, Transform, Load) Engine** for **Node.js** and **TypeScript**.
 
 It is designed for modern developers who need to process massive datasets (gigabytes or terabytes) without worrying about "Out of Memory" (OOM) errors. By using Node.js streams and async iterators, Data-Genie ensures your application maintains a **constant memory footprint**, regardless of whether you are processing 100 rows or 100 million rows.
+
+While written in TypeScript for maximum type safety and developer experience, it is **fully compatible with plain JavaScript projects**.
 
 ## Why Data-Genie?
 

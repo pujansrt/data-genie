@@ -1,5 +1,5 @@
 # Data-Genie 🧞‍♂️
-A high-performant, streaming-first **ETL Engine** in **TypeScript**, designed for processing massive datasets with a **constant memory footprint**.
+A high-performant, streaming-first **ETL Engine** for **Node.js** and **TypeScript**, designed for processing massive datasets with a **constant memory footprint**.
 
 [![NPM Version](https://img.shields.io/npm/v/@pujansrt/data-genie.svg?style=flat-square)](https://www.npmjs.com/package/@pujansrt/data-genie)
 [![NPM Bundle Size](https://img.shields.io/bundlephobia/minzip/@pujansrt/data-genie?style=flat-square)](https://bundlephobia.com/package/@pujansrt/data-genie)
@@ -9,6 +9,14 @@ A high-performant, streaming-first **ETL Engine** in **TypeScript**, designed fo
 [![Coverage](https://img.shields.io/badge/coverage-91%25-brightgreen.svg?style=flat-square)](https://github.com/pujansrt/data-genie)
 
 ---
+
+## Documentation & Examples
+
+Visit our full documentation site for in-depth guides, API reference, and real-world recipes:
+
+**[https://pujansrt.github.io/data-genie/](https://pujansrt.github.io/data-genie/)**
+
+---
 ## Installation
 
 ```bash
@@ -16,8 +24,6 @@ npm install @pujansrt/data-genie
 ```
 
 > **Note:** `zod`, `@aws-sdk/client-s3`, and `exceljs` are optional peer dependencies in case you need them.
-
-
 
 ## Quick Start (Convert CSV to JSON in 30s)
 
@@ -48,15 +54,6 @@ await Job.preview(pipeline);
 
 In our latest benchmarks (Processing 500k records), Data-Genie used **100x less memory** than standard array-based processing.
 
-| Metric | Naive Approach (Load-All) | **Data-Genie (Streaming)** |
-| :--- | :--- | :--- |
-| **Peak Memory (RSS)** | **~396 MB** | **~3.4 MB** |
-| **Stability** | Risks OOM on large files | **Constant Memory Footprint** |
-| **Latency** | Waits for full read | **Starts writing immediately** |
-
-
-Most ETL tools fail when processing files larger than the available RAM. Data-Genie ensures a **Constant Memory Footprint (O(1))**.
-
 | Data Size | Naive Approach (Array-based) | **Data-Genie (Streaming)** |
 | :--- | :--- | :--- |
 | 100 KB | ~10 MB RAM | **~10 MB RAM** |
@@ -65,82 +62,21 @@ Most ETL tools fail when processing files larger than the available RAM. Data-Ge
 
 ---
 
-## Architecture Overview
-
-```mermaid
-graph TD
-    subgraph Sources [Data Sources]
-        direction TB
-        S1[CSV / TSV / FixedWidth]
-        S2[JSON / Parquet / Excel]
-        S3[SQL Database]
-        S4[AWS S3 / API]
-    end
-
-    subgraph Engine [Data-Genie Core]
-        direction TB
-        R[DataReader]
-        subgraph Pipeline [Stream Pipeline]
-            T[Transform / Filter]
-            V[Validate]
-            C[Custom Function]
-            CB[Callback RowByRow/Batch]
-        end
-        W[DataWriter]
-    end
-
-    subgraph Sinks [Data Sinks]
-        direction TB
-        D1[CSV / TSV / FixedWidth]
-        D2[JSON / Parquet / Excel]
-        D3[SQL Database]
-        D4[AWS S3 / Console]
-        D5[Memory]
-    end
-
-    Sources --> R
-    R --> Pipeline
-    Pipeline --> W
-    W --> Sinks
-
-    style Engine fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px,color:#000
-    style Sources fill:#e1f5fe,stroke:#0277bd,stroke-width:2px,color:#000
-    style Sinks fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px,color:#000
-    style Pipeline fill:#ffffff,stroke:#666,stroke-dasharray: 5 5,color:#000
-```
-
----
-
 ## Features
 
 - **Streaming-First:** Constant memory footprint regardless of file size (O(1) memory complexity).
 - **Multi-Format:** Support for CSV, TSV, JSON, NDJSON, Parquet, Excel, and SQL.
 - **Transport Agnostic:** Read/Write from Local Disk, AWS S3, HTTP APIs, or Memory.
-- **Built-in Pipeline:** Filtering, Mapping, Renaming, and Zod-based Validation.
 - **Fault Tolerant:** Retries, Circuit Breakers, and Dead Letter Queues (DLQ).
 
 ---
 
-##  Advanced Usage
+## Common Recipes
 
-### 1. Data Transformation Pipeline
+### 1. S3 Parquet to Local CSV
+Stream massive datasets directly from the cloud to your local machine.
+
 ```typescript
-let reader = new CSVReader('users.csv');
-
-reader = new TransformingReader(reader)
-    .add(new MapFields('fullName', ['fname', 'lname'], (f, l) => `${f} ${l}`).transform())
-    .add(new RenameField('city', 'town').transform());
-
-const writer = new JsonWriter('output.json');
-
-await Job.run(reader, writer);
-
-```
-
-### 2. S3 Parquet to Local CSV Streaming
-```typescript
-const s3Client = new S3Client({ region: 'eu-west-1' });
-
 const source = new S3Source(s3Client, 'mybucket', 'data/users.parquet');
 const reader = new ParquetReader(source);
 const writer = new CSVWriter('users.csv');
@@ -148,71 +84,33 @@ const writer = new CSVWriter('users.csv');
 await Job.run(reader, writer);
 ```
 
-### 3. Schema Validation (Zod)
-```typescript
-const reader = //...
+### 2. Schema Validation (Zod) + DLQ
+Validate data in real-time and divert "poison" records to a Dead Letter Queue.
 
+```typescript
 const validator = new SchemaValidatingReader(reader, z.object({
     email: z.string().email(),
     age: z.number().min(18)
-}));
+})).setDLQ(new JsonWriter('invalid_records.json'));
 
-const writer = //...
-await Job.run(validator, writer);
+await Job.run(validator, new SQLWriter(db, 'users'));
 ```
-### 4. Advanced Pipeline (Transform + Fan-out)
+
+### 3. Parallel Fan-out (Multi-Sink)
 Read once, transform, and write to **multiple** destinations in parallel.
 
 ```ts
-const pipeline = new TransformingReader(reader)
-  .add((r) => ({ ...r, NAME: String(r.full_name).toUpperCase() }))
-  .add(new SetCalculatedField('total', 'record.price * record.qty').transform())
-  // Custom function mapping
-  .add(new MapFields('summary', ['NAME', 'total'], (name, total) => `${name} spent $${total}`).transform());
-
 const multiWriter = new MultiWriter(
   new ConsoleWriter(),
-  new JsonWriter(new FileSink('processed.json'))
+  new JsonWriter('processed.json'),
+  new SQLWriter(db, 'audit_log')
 );
 
 await Job.run(pipeline, multiWriter);
 ```
 
-### 5. High-Performance Excel (XLSX)
-```ts
-// Optional: npm install exceljs
-import { XlsxReader, XlsxWriter, Job } from '@pujansrt/data-genie';
+**[See 15+ more recipes in our Cookbook](https://pujansrt.github.io/data-genie/cookbook/)**
 
-const reader = new XlsxReader('large_data.xlsx'); // String path defaults to FileSource
-const writer = new XlsxWriter('output.xlsx');    // String path defaults to FileSink
-
-await Job.run(reader, writer);
-```
-
-### 6. API Ingestion (HttpSource)
-```ts
-import { HttpSource, JsonReader, Job } from '@pujansrt/data-genie';
-
-const source = new HttpSource('https://api.example.com/data.json');
-const reader = new JsonReader(source);
-
-await Job.run(reader, new JsonWriter('backup.json'));
-```
-
-### 7. Custom Callbacks & Batching (RabbitMQ / DB)
-Push data to external queues or perform bulk database inserts efficiently.
-
-```typescript
-// Push to RabbitMQ row-by-row
-const rabbitWriter = new CallbackWriter(async (row) => {
-    await queue.publish('data-events', row);
-});
-
-// Bulk insert into DB in batches of 100
-const dbWriter = new BatchCallbackWriter(100, async (batch) => {
-    await db.table('users').insert(batch);
-});
-```
 ---
 
 ## Contributing
@@ -224,7 +122,6 @@ Contributions are welcome! Whether it's adding a new DataReader, fixing a bug, o
 3.  Submit a PR!
 
 ## Running Benchmarks
-
 
 Want to see the performance difference on your own machine? We provide a built-in benchmark script that compares Data-Genie with a standard `fs.readFileSync` approach.
 
@@ -239,4 +136,3 @@ npx tsx benchmarks/run-benchmark.ts
 
 ## License
 MIT © [Pujan Srivastava](https://github.com/pujansrt)
-

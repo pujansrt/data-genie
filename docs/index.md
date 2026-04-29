@@ -4,7 +4,7 @@ layout: home
 hero:
   name: Data-Genie
   text: High-Performant ETL Engine
-  tagline: A streaming-first ETL engine for TypeScript, designed for massive datasets with a constant memory footprint.
+  tagline: A streaming-first ETL engine for Node.js and TypeScript, designed for massive datasets with a constant memory footprint.
   actions:
     - theme: brand
       text: Get Started

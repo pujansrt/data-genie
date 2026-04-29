@@ -54,7 +54,10 @@ Act as middleware in the pipeline. They receive a record, modify it (or discard 
 - **FilteringReader**: Keep only records that match specific rules.
 - **SchemaValidatingReader**: Ensure records match a Zod schema.
 
-### 3. DataWriter
+### 3. Resilience & Dead Letter Queues (DLQ)
+Data-Genie is designed for "dirty" real-world data. Components like `ValidatingReader` support a **Dead Letter Queue**. Instead of throwing an error and stopping the job, invalid records are diverted to a separate `DataWriter` (like a JSON file or a secondary table), allowing the main pipeline to continue uninterrupted.
+
+### 4. DataWriter
 Takes the final objects and persists them to a destination.
 - **JSON/CSV Writers**: Write to disk.
 - **SQLWriter**: Bulk insert into databases.
