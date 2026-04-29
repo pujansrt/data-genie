@@ -44,17 +44,10 @@ Run via `data-genie run pipeline.yaml` command.
 * **Multi-file Glob Support** - Currently, CSVReader usually points to a single file.
   * Feature: Allow the source to be a glob pattern (e.g., input/data/*.csv). A CompositeReader could then iterate through all matching files and stream them as one continuous data
     source.
-* **Auto-Schema Inference & DDL Generato**r - One of the most tedious parts of ETL is manually creating Zod schemas or SQL tables.
+* **Auto-Schema Inference & DDL Generator** - One of the most tedious parts of ETL is manually creating Zod schemas or SQL tables.
   * Feature: A utility function inferSchema(reader) that samples the first 100-1000 records and generates:
     * A suggested Zod schema.
     * A SQL `CREATE TABLE` script with the correct data types. 
-* **Job Events & Observability** - The Job.run() method is currently static and just logs to the console.
-  * Feature: Make Job an instance that extends `EventEmitter`. This would allow external tools to "hook" into the job:
-```js
-job.on('progress', (metrics) => { ... });
-job.on('error', (err, record) => { ... });
-```
-This is essential for building a Web UI or a dashboard on top of the engine.
 * Join & Enrichment Reader - ETL often requires "joining" two streams.
   * Feature: A LookupTransformer that can perform an in-memory join against a smaller reference dataset (e.g., "Join these transactions with this currency_codes.json file to add a
     symbol field").

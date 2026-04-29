@@ -133,4 +133,61 @@ describe('Job', () => {
 
     expect(mockLogger.warn).toHaveBeenCalledWith('No records found to preview.');
   });
+
+  it('should emit events during execution', async () => {
+    const mockRecords = [{ id: 1 }, { id: 2 }];
+    const mockReader: DataReader = {
+      read: async function* () {
+        for (const r of mockRecords) yield r;
+      }
+    };
+    const mockWriter: DataWriter = {
+      write: jest.fn().mockResolvedValue(undefined),
+      writeAll: jest.fn().mockResolvedValue(undefined),
+      close: jest.fn().mockResolvedValue(undefined),
+    };
+
+    const job = new Job(mockReader, mockWriter);
+    
+    const events: string[] = [];
+    const records: any[] = [];
+    let completeMetrics: any = null;
+
+    job.on('start', () => events.push('start'));
+    job.on('record', (record) => {
+      events.push('record');
+      records.push(record);
+    });
+    job.on('complete', (metrics) => {
+      events.push('complete');
+      completeMetrics = metrics;
+    });
+
+    await job.run();
+
+    expect(events).toEqual(['start', 'record', 'record', 'complete']);
+    expect(records).toEqual(mockRecords);
+    expect(completeMetrics.recordCount).toBe(2);
+  });
+
+  it('should emit error event when write fails', async () => {
+    const mockReader: DataReader = {
+      read: async function* () {
+        yield { id: 1 };
+      }
+    };
+    const error = new Error('Write failed');
+    const mockWriter: DataWriter = {
+      write: jest.fn().mockRejectedValue(error),
+      writeAll: jest.fn().mockRejectedValue(error),
+      close: jest.fn().mockResolvedValue(undefined),
+    };
+
+    const job = new Job(mockReader, mockWriter);
+    const errorHandler = jest.fn();
+    job.on('error', errorHandler);
+
+    await expect(job.run()).rejects.toThrow('Write failed');
+    expect(errorHandler).toHaveBeenCalledWith(error, { id: 1 });
+  });
 });

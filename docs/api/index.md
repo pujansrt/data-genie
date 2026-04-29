@@ -18,6 +18,18 @@ Interface for all record sources. Must implement a `read()` method that returns 
 ### `DataWriter<T>`
 Interface for all data sinks. Must implement `write(record)`, `writeAll(records)`, and `close()`.
 
+### `Job<T>`
+The orchestrator that runs the pipeline. It extends `EventEmitter`.
+- **Static Methods**:
+  - `Job.run(reader, writer, options)`: Runs a job and returns metrics.
+  - `Job.preview(reader, options)`: Prints the first N records to the console.
+- **Instance Events**:
+  - `start`: `{ startTime }`
+  - `record`: `DataRecord`
+  - `progress`: `JobMetrics`
+  - `error`: `(Error, DataRecord)`
+  - `complete`: `JobMetrics`
+
 ---
 
 ## Modules

@@ -39,6 +39,8 @@ async function main() {
 main().catch(console.error);
 ```
 
+> **Pro Tip:** For large jobs, you can listen to real-time events by instantiating the job: `new Job(reader, writer).on('progress', (m) => ...)`. See the [Observability Guide](../cookbook/memory-and-callbacks#job-events--observability) for more.
+
 ## Previewing Data
 
 Before running a full job, you can preview the first few records to ensure your readers and transformers are working correctly.

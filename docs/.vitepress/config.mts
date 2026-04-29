@@ -42,7 +42,8 @@ export default withMermaid(
               { text: 'Filtering Data', link: '/cookbook/filtering' },
               { text: 'Validation & DLQ', link: '/cookbook/validation-dlq' },
               { text: 'Multi-Sink Parallel', link: '/cookbook/multi-sink' },
-              { text: 'Memory & Callbacks', link: '/cookbook/memory-and-callbacks' }
+              { text: 'Memory & Callbacks', link: '/cookbook/memory-and-callbacks' },
+              { text: 'Real-time Web Dashboard', link: '/cookbook/web-ui-dashboard' }
             ]
           }
         ],
