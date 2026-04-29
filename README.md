@@ -68,6 +68,7 @@ In our latest benchmarks (Processing 500k records), Data-Genie used **100x less 
 - **Multi-Format:** Support for CSV, TSV, JSON, NDJSON, Parquet, Excel, and SQL.
 - **Transport Agnostic:** Read/Write from Local Disk, AWS S3, HTTP APIs, or Memory.
 - **Fault Tolerant:** Retries, Circuit Breakers, and Dead Letter Queues (DLQ).
+- **Event Emitters Support** - Use Job events to build a monitoring UI for your ETL pipelines.
 
 ---
 

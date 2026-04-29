@@ -1,50 +1,76 @@
-# Memory & Callbacks
+# Memory and Callbacks
 
-Data-Genie isn't just for files and databases. You can use it to process in-memory arrays or integrate with custom logic via callbacks.
+Data-Genie is optimized for streaming, but sometimes you need to collect results in memory or execute custom logic (like pushing to a message queue or a specialized API) for each record.
 
-## In-Memory Sources
-Perfect for unit tests or small datasets that you've already loaded.
+## Memory Source & Sink
+
+If you are working with small datasets or writing tests, you can use the `MemorySource` and `MemorySink`.
 
 ```typescript
-import { MemoryReader, JsonWriter, Job } from '@pujansrt/data-genie';
+import { MemorySource, MemorySink, Job } from '@pujansrt/data-genie';
 
-const data = [
-  { id: 1, name: 'Alice' },
-  { id: 2, name: 'Bob' }
-];
+const source = new MemorySource('id,name\n1,John\n2,Jane');
+const sink = new MemorySink();
 
-const reader = new MemoryReader(data);
-await Job.run(reader, new JsonWriter('output.json'));
+await Job.run(new CSVReader(source), new JsonWriter(sink));
+
+const output = sink.getData(); // Returns a Buffer of the generated JSON
+console.log(output.toString());
 ```
 
-## Custom Callbacks (`CallbackWriter`)
-Use this when you need to perform an action for every record that isn't covered by a built-in writer.
+## Callback Writer
+
+The `CallbackWriter` is the "Swiss Army Knife" of sinks. It executes a function for every record.
 
 ```typescript
-import { CallbackWriter, Job } from '@pujansrt/data-genie';
-
 const writer = new CallbackWriter(async (record) => {
-  // Integrate with any 3rd party API, logger, or custom logic
-  await myCustomApi.send(record);
+  await myApiService.send(record);
 });
 
 await Job.run(reader, writer);
 ```
 
-## High-Performance Batching (`BatchCallbackWriter`)
-When dealing with external systems (APIs, Message Queues, Databases), sending records one-by-one is often slow due to network overhead. Batching solves this.
+## Batch Callback Writer
+
+For high-performance scenarios where you want to perform bulk operations (e.g., batch database inserts), use the `BatchCallbackWriter`.
 
 ```typescript
-import { BatchCallbackWriter, Job } from '@pujansrt/data-genie';
-
-// Collect 100 records at a time
 const writer = new BatchCallbackWriter(100, async (batch) => {
   // batch is an array of 100 records
-  await myDatabase.bulkInsert(batch);
+  await db.insert(batch);
 });
 
 await Job.run(reader, writer);
 ```
 
-## Mixing & Matching
-You can use `MemoryReader` to test your `BatchCallbackWriter` locally before connecting to production data sources.
+## Job Events & Observability
+
+For building dashboards or monitoring tools, you can instantiate the `Job` class to listen for events.
+
+```typescript
+import { Job } from '@pujansrt/data-genie';
+
+const job = new Job(reader, writer);
+
+job.on('start', ({ startTime }) => {
+  console.log('Job started at:', startTime);
+});
+
+job.on('progress', (metrics) => {
+  console.log(`Current progress: ${metrics.recordCount} records...`);
+});
+
+job.on('record', (record) => {
+  // Optional: peek at every record as it passes through
+});
+
+job.on('error', (error, record) => {
+  console.error('Failed to process record:', record, error);
+});
+
+job.on('complete', (metrics) => {
+  console.log('Job finished! Total records:', metrics.recordCount);
+});
+
+const metrics = await job.run();
+```

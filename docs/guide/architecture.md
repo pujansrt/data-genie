@@ -64,5 +64,11 @@ Takes the final objects and persists them to a destination.
 - **CallbackWriter**: Execute custom code for every record (e.g., push to Kafka).
 - **MultiWriter**: Fan-out data to multiple destinations simultaneously.
 
+### 5. Job Orchestrator
+The `Job` class binds everything together. It handles the iteration loop, tracks performance metrics, and provides observability through an event-driven API.
+- **Event-Driven**: Emits lifecycle events (`start`, `progress`, `record`, `error`, `complete`).
+- **Progress Tracking**: Built-in support for TTY progress bars.
+- **Dry Runs**: `Job.preview()` allows inspecting data without writing it.
+
 ## The "Constant Memory" Secret
 Unlike standard libraries that use `fs.readFileSync` or `JSON.parse` on the whole file, Data-Genie uses **Async Iterators**. Only a few records exist in memory at any given time. As soon as a record is written to the sink, it is cleared from memory, allowing you to process infinite streams.
