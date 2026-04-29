@@ -25,7 +25,10 @@ npm install @pujansrt/data-genie
 
 > **Note:** `zod`, `@aws-sdk/client-s3`, and `exceljs` are optional peer dependencies in case you need them.
 
-## Quick Start (Convert CSV to JSON in 30s)
+## Quick Start (Convert 1 Million records CSV to JSON in 15s)
+
+![demo](./docs/demo.gif)
+
 
 ```typescript
 import { CSVReader, JsonWriter, Job } from '@pujansrt/data-genie';
