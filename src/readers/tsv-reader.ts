@@ -15,9 +15,9 @@ export class TSVReader<T = DataRecord> extends BaseReader<T> {
 
   /**
    * Constructs a new TSVReader.
-   * @param source The path to the TSV file or a DataSource.
+   * @param source The path to the TSV file, a DataSource, or a Buffer.
    */
-  constructor(source: string | DataSource, options?: { schema?: SchemaValidator<T>; hasFieldNamesInFirstRow?: boolean }) {
+  constructor(source: string | DataSource | Buffer, options?: { schema?: SchemaValidator<T>; hasFieldNamesInFirstRow?: boolean }) {
     super();
     this.source = ensureDataSource(source);
     this.schema = options?.schema;

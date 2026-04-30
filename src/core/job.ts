@@ -54,6 +54,8 @@ export class Job<T = DataRecord> extends EventEmitter {
 
     try {
       for await (const record of this.reader.read()) {
+        if (record === null || record === undefined) continue;
+
         try {
           await this.writer.write(record);
           recordCount++;

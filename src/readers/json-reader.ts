@@ -9,7 +9,7 @@ export class JsonReader<T = DataRecord> extends BaseReader<T> {
   private ignoreErrors: boolean = false;
   private dlqWriter?: DataWriter<any>;
 
-  constructor(source: string | DataSource, options?: { schema?: SchemaValidator<T>, ignoreErrors?: boolean }) {
+  constructor(source: string | DataSource | Buffer, options?: { schema?: SchemaValidator<T>, ignoreErrors?: boolean }) {
     super();
     this.source = ensureDataSource(source);
     this.schema = options?.schema;
@@ -78,9 +78,7 @@ export class JsonReader<T = DataRecord> extends BaseReader<T> {
          throw error;
        }
     } finally {
-      if (this.dlqWriter) {
-        await this.dlqWriter.close();
-      }
+      // We do NOT close the dlqWriter here, because it might be shared
     }
   }
 }

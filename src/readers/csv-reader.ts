@@ -19,7 +19,7 @@ export class CSVReader<T = DataRecord> extends BaseReader<T> {
   private ignoreErrors: boolean = false;
   private dlqWriter?: DataWriter<any>;
 
-  constructor(source: string | DataSource, options?: CSVReaderOptions<T>) {
+  constructor(source: string | DataSource | Buffer, options?: CSVReaderOptions<T>) {
     super();
     this.source = ensureDataSource(source);
     if (options) {
@@ -72,18 +72,18 @@ export class CSVReader<T = DataRecord> extends BaseReader<T> {
       })
     );
 
-    // Using on('record') might be more reliable for some versions
-    parser.on('record', (record) => {
-        if (expectedColumnCount === -1) {
-            expectedColumnCount = Object.keys(record).length;
+    // Get expected column count from headers if available
+    parser.on('record', (record, context) => {
+        if (expectedColumnCount === -1 && context.columns) {
+            expectedColumnCount = context.columns.length;
         }
     });
 
     try {
       for await (const record of parser) {
-        // If on('record') didn't fire in time for the first for-await iteration
+        // Fallback for cases where 'record' event or context.columns is missing
         if (expectedColumnCount === -1) {
-           expectedColumnCount = Object.keys(record).length;
+            expectedColumnCount = Object.keys(record).length;
         }
 
         try {
@@ -130,9 +130,7 @@ export class CSVReader<T = DataRecord> extends BaseReader<T> {
         throw error;
       }
     } finally {
-      if (this.dlqWriter) {
-        await this.dlqWriter.close();
-      }
+      // We do NOT close the dlqWriter here, because it might be shared (e.g. by ValidatingReader)
     }
   }
 }

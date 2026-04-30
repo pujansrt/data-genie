@@ -44,11 +44,14 @@ export class CSVWriter<T = DataRecord> implements DataWriter<T> {
     }
   }
 
-  public async writeAll(records: AsyncIterableIterator<T>): Promise<void> {
+  public async *writeAll(records: AsyncIterableIterator<T>): Promise<void> {
     for await (const record of records) {
-      await this.write(record);
+      if (record !== null && record !== undefined) {
+        await this.write(record);
+      }
     }
   }
+
 
   public async close(): Promise<void> {
     return new Promise((resolve, reject) => {

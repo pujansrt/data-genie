@@ -16,7 +16,7 @@ export class XlsxReader<T = DataRecord> extends BaseReader<T> {
   private options: XlsxReaderOptions<T>;
   private schema?: SchemaValidator<T>;
 
-  constructor(source: string | DataSource, options: XlsxReaderOptions<T> = {}) {
+  constructor(source: string | DataSource | Buffer, options: XlsxReaderOptions<T> = {}) {
     super();
     this.source = ensureDataSource(source);
     this.options = {

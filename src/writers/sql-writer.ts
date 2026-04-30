@@ -124,6 +124,14 @@ export class SQLWriter implements DataWriter {
     }
   }
 
+  /**
+   * Sets a DataWriter to act as a Dead Letter Queue (DLQ).
+   * Not implemented for SQLWriter.
+   */
+  public setDLQ(writer: DataWriter<any>): this {
+    return this;
+  }
+
   public async close(): Promise<void> {
     try {
       await this.flush(); // Ensure any remaining records are written

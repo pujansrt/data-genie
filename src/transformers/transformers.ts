@@ -1,4 +1,4 @@
-import { DataReader, DataRecord } from '@/core/interfaces';
+import { DataReader, DataRecord, DataWriter } from '@/core/interfaces';
 import { BaseReader } from '@/core/base-reader';
 
 /**
@@ -14,9 +14,18 @@ export abstract class DataTransformer<TOut = DataRecord, TIn = any> extends Base
   }
 
   /**
+   * Sets a DataWriter to act as a Dead Letter Queue (DLQ) and propagates it to the underlying reader.
+   */
+  public setDLQ(writer: DataWriter<any>): this {
+    if (this.reader && (this.reader as any).setDLQ) {
+      (this.reader as any).setDLQ(writer);
+    }
+    return this;
+  }
+
+  /**
    * Reads data from the underlying reader, applies transformations,
    * and yields the transformed records.
-   * This method must be implemented by concrete transformer classes.
    */
   public abstract read(): AsyncIterableIterator<TOut>;
 }

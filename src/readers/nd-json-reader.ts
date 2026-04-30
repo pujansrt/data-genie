@@ -17,9 +17,9 @@ export class NDJsonReader<T = DataRecord> extends BaseReader<T> {
 
   /**
    * Constructs a new NDJsonReader.
-   * @param source The path to the NDJSON file or a DataSource.
+   * @param source The path to the NDJSON file, a DataSource, or a Buffer.
    */
-  constructor(source: string | DataSource, options?: { schema?: SchemaValidator<T>, ignoreErrors?: boolean }) {
+  constructor(source: string | DataSource | Buffer, options?: { schema?: SchemaValidator<T>, ignoreErrors?: boolean }) {
     super();
     this.source = ensureDataSource(source);
     this.schema = options?.schema;
@@ -95,9 +95,7 @@ export class NDJsonReader<T = DataRecord> extends BaseReader<T> {
         }
       }
     } finally {
-      if (this.dlqWriter) {
-        await this.dlqWriter.close();
-      }
+      // We do NOT close the dlqWriter here, because it might be shared
     }
   }
 }

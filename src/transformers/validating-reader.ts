@@ -36,12 +36,7 @@ export class ValidatingReader<T = DataRecord> extends DataTransformer<T, T> {
    */
   public setDLQ(writer: DataWriter<any>): this {
     this.dlqWriter = writer;
-    
-    // Also propagate to underlying reader if it supports setDLQ
-    if (this.reader && (this.reader as any).setDLQ) {
-       (this.reader as any).setDLQ(writer);
-    }
-    
+    super.setDLQ(writer); // Propagate to underlying reader
     return this;
   }
 

@@ -8,6 +8,7 @@ export { HttpReader } from './readers/http-reader';
 export { XlsxReader } from './readers/xlsx-reader';
 export { MemoryReader } from './readers/memory-reader';
 export { ParquetReader } from './readers/parquet-reader';
+export { XMLReader } from './readers/xml-reader';
 
 export { CSVWriter } from './writers/csv-writer';
 export { ConsoleWriter } from './writers/console-writer';
@@ -21,6 +22,7 @@ export { MultiWriter } from './writers/multi-writer';
 export { XlsxWriter } from './writers/xlsx-writer';
 export { MemoryWriter } from './writers/memory-writer';
 export { ParquetWriter } from './writers/parquet-writer';
+export { XMLWriter } from './writers/xml-writer';
 export { CallbackWriter } from './writers/callback-writer';
 export { BatchCallbackWriter } from './writers/batch-callback-writer';
 

@@ -23,8 +23,10 @@ export class XMLReader<T = DataRecord> extends BaseReader<T> {
   private trimWhitespace: boolean;
   private stripNamespaces: boolean;
   private fieldMapping?: Record<string, string>;
+  private ignoreErrors: boolean = false;
+  private dlqWriter?: DataWriter<any>;
 
-  constructor(source: string | DataSource, options: XMLReaderOptions) {
+  constructor(source: string | DataSource | Buffer, options: XMLReaderOptions) {
     super();
     this.source = ensureDataSource(source);
     this.isDeepSearch = options.recordPath.startsWith('//');
@@ -33,6 +35,24 @@ export class XMLReader<T = DataRecord> extends BaseReader<T> {
     this.trimWhitespace = options.trimWhitespace ?? true;
     this.stripNamespaces = options.stripNamespaces ?? false;
     this.fieldMapping = options.fieldMapping;
+    if (options.ignoreErrors !== undefined) this.ignoreErrors = options.ignoreErrors;
+  }
+
+  /**
+   * Whether to ignore errors during processing (e.g., malformed XML).
+   */
+  public setIgnoreErrors(value: boolean): this {
+    this.ignoreErrors = value;
+    return this;
+  }
+
+  /**
+   * Sets a DataWriter to act as a Dead Letter Queue (DLQ).
+   */
+  public setDLQ(writer: DataWriter<any>): this {
+    this.dlqWriter = writer;
+    this.ignoreErrors = true;
+    return this;
   }
 
   private getTagName(name: string): string {
@@ -162,20 +182,62 @@ export class XMLReader<T = DataRecord> extends BaseReader<T> {
     });
 
     parser.on('error', (err: any) => {
-       throw err;
+       if (this.ignoreErrors) {
+          if (this.dlqWriter) {
+             // We can't easily get the current chunk here, but we have the error
+             this.dlqWriter.write({
+                _error: err.message,
+                _type: 'parse_error',
+                _line: parser.line,
+                _column: parser.column
+             }).catch(() => {});
+          }
+       } else {
+          throw err;
+       }
     });
 
-    for await (const chunk of stream) {
-      parser.write(chunk.toString());
+    try {
+      for await (const chunk of stream) {
+        try {
+          parser.write(chunk.toString());
+          while (recordQueue.length > 0) {
+            yield recordQueue.shift()!;
+          }
+        } catch (error) {
+          console.error('[XMLReader] caught error during write:', error.message);
+          if (this.ignoreErrors) {
+            if (this.dlqWriter) {
+              await this.dlqWriter.write({
+                _error: error instanceof Error ? error.message : String(error),
+                _type: 'parse_error',
+                _chunk: chunk.toString().substring(0, 1000)
+              });
+            }
+            continue;
+          }
+          throw error;
+        }
+      }
+      
+      // Make sure we yield any remaining records at the end
+      parser.close();
       while (recordQueue.length > 0) {
         yield recordQueue.shift()!;
       }
-    }
-    
-    // Make sure we yield any remaining records at the end
-    parser.close();
-    while (recordQueue.length > 0) {
-      yield recordQueue.shift()!;
+    } catch (error) {
+      if (this.ignoreErrors) {
+        if (this.dlqWriter) {
+          await this.dlqWriter.write({
+            _error: error instanceof Error ? error.message : String(error),
+            _type: 'fatal_parse_error'
+          });
+        }
+      } else {
+        throw error;
+      }
+    } finally {
+      // We do NOT close the dlqWriter here, because it might be shared
     }
   }
 

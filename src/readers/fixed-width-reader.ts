@@ -19,7 +19,7 @@ export class FixedWidthReader<T = DataRecord> extends BaseReader<T> {
   private initialized = false;
   private schema?: SchemaValidator<T>;
 
-  constructor(source: string | DataSource, options?: FixedWidthReaderOptions<T>) {
+  constructor(source: string | DataSource | Buffer, options?: FixedWidthReaderOptions<T>) {
     super();
     this.source = ensureDataSource(source);
     if (options) {

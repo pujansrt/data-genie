@@ -15,7 +15,7 @@ export class ParquetReader<T = DataRecord> extends BaseReader<T> {
   private source: DataSource;
   private schema?: SchemaValidator<T>;
 
-  constructor(source: string | DataSource, options?: { schema?: SchemaValidator<T> }) {
+  constructor(source: string | DataSource | Buffer, options?: { schema?: SchemaValidator<T> }) {
     super();
     this.source = ensureDataSource(source);
     this.schema = options?.schema;
