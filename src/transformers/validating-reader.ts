@@ -36,12 +36,40 @@ export class ValidatingReader<T = DataRecord> extends DataTransformer<T, T> {
    */
   public setDLQ(writer: DataWriter<any>): this {
     this.dlqWriter = writer;
+    
+    // Also propagate to underlying reader if it supports setDLQ
+    if (this.reader && (this.reader as any).setDLQ) {
+       (this.reader as any).setDLQ(writer);
+    }
+    
     return this;
   }
 
   public async *read(): AsyncIterableIterator<T> {
+    const iterator = this.reader.read();
+
     try {
-      for await (const record of this.reader.read()) {
+      while (true) {
+        let result;
+        try {
+          result = await iterator.next();
+        } catch (error) {
+          if (this.dlqWriter) {
+            await this.dlqWriter.write({
+              _error: error instanceof Error ? error.message : String(error),
+              _type: 'upstream_error',
+              ...(error as any)
+            });
+            // After an upstream error, the iterator is usually broken.
+            // We break the loop but the DLQ will have caught the error.
+            break;
+          }
+          throw error;
+        }
+
+        if (result.done) break;
+        const record = result.value;
+
         let isValid = true;
         const recordMessages: ValidationMessage<T>[] = [];
 

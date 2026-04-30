@@ -43,4 +43,20 @@ describe('Parquet Handlers', () => {
     const parquet = require('parquetjs-lite');
     expect(parquet.ParquetWriter.openFile).toHaveBeenCalled();
   });
+
+  it('should write using setSchema', async () => {
+    const schema = { id: { type: 'INT64' } };
+    const writer = new ParquetWriter(new FileSink('out2.parquet'));
+    writer.setSchema(schema);
+    await writer.write({ id: 1 });
+    await writer.close();
+    
+    const parquet = require('parquetjs-lite');
+    expect(parquet.ParquetWriter.openFile).toHaveBeenCalled();
+  });
+
+  it('should throw error if schema is missing', async () => {
+    const writer = new ParquetWriter(new FileSink('out3.parquet'));
+    await expect(writer.write({ id: 1 })).rejects.toThrow("Parquet schema must be provided");
+  });
 });

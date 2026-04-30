@@ -1,4 +1,4 @@
-import { DataReader, DataRecord, DataSource } from '@/core/interfaces';
+import { DataRecord, DataSource, DataWriter } from '@/core/interfaces';
 import { ensureDataSource } from '@/core/transport-utils';
 import * as readline from 'readline';
 import { SchemaValidator } from '@/transformers/schema-validating-reader';
@@ -12,15 +12,18 @@ import { BaseReader } from '@/core/base-reader';
 export class NDJsonReader<T = DataRecord> extends BaseReader<T> {
   private source: DataSource;
   private schema?: SchemaValidator<T>;
+  private ignoreErrors: boolean = false;
+  private dlqWriter?: DataWriter<any>;
 
   /**
    * Constructs a new NDJsonReader.
    * @param source The path to the NDJSON file or a DataSource.
    */
-  constructor(source: string | DataSource, options?: { schema?: SchemaValidator<T> }) {
+  constructor(source: string | DataSource, options?: { schema?: SchemaValidator<T>, ignoreErrors?: boolean }) {
     super();
     this.source = ensureDataSource(source);
     this.schema = options?.schema;
+    if (options?.ignoreErrors !== undefined) this.ignoreErrors = options.ignoreErrors;
   }
 
   /**
@@ -29,6 +32,23 @@ export class NDJsonReader<T = DataRecord> extends BaseReader<T> {
    * @returns The current NDJsonReader instance for chaining.
    */
   public setOptions(options: any): this {
+    return this;
+  }
+
+  /**
+   * Whether to ignore errors during processing (e.g., malformed lines).
+   */
+  public setIgnoreErrors(value: boolean): this {
+    this.ignoreErrors = value;
+    return this;
+  }
+
+  /**
+   * Sets a DataWriter to act as a Dead Letter Queue (DLQ).
+   */
+  public setDLQ(writer: DataWriter<any>): this {
+    this.dlqWriter = writer;
+    this.ignoreErrors = true;
     return this;
   }
 
@@ -43,24 +63,40 @@ export class NDJsonReader<T = DataRecord> extends BaseReader<T> {
       crlfDelay: Infinity // Recognizes both CRLF and LF as line endings
     });
 
-    for await (const line of rl) {
-      // Skip empty lines that might occur (e.g., at the end of the file or accidental blank lines)
-      if (!line.trim()) {
-        continue;
-      }
-
-      try {
-        // Parse each non-empty line as a JSON object
-        const record = JSON.parse(line);
-        if (this.schema) {
-          yield this.schema.parse(record);
-        } else {
-          yield record as T;
+    try {
+      for await (const line of rl) {
+        // Skip empty lines that might occur (e.g., at the end of the file or accidental blank lines)
+        if (!line.trim()) {
+          continue;
         }
-      } catch (error) {
-        // Log an error or throw if a line cannot be parsed as valid JSON
-        console.error(`NDJsonReader: Error parsing JSON line from ${this.source.name()}: "${line.substring(0, 100)}..."`, error);
-        throw new Error(`Invalid JSON format in ${this.source.name()} on line: ${line.substring(0, 50)}...`);
+
+        try {
+          // Parse each non-empty line as a JSON object
+          const record = JSON.parse(line);
+          if (this.schema) {
+            yield this.schema.parse(record);
+          } else {
+            yield record as T;
+          }
+        } catch (error) {
+          if (this.ignoreErrors) {
+            if (this.dlqWriter) {
+              await this.dlqWriter.write({
+                _raw_line: line,
+                _error: error instanceof Error ? error.message : String(error),
+                _type: 'parse_error'
+              });
+            }
+            continue;
+          }
+          // Log an error or throw if a line cannot be parsed as valid JSON
+          console.error(`NDJsonReader: Error parsing JSON line from ${this.source.name()}: "${line.substring(0, 100)}..."`, error);
+          throw new Error(`Invalid JSON format in ${this.source.name()} on line: ${line.substring(0, 50)}...`);
+        }
+      }
+    } finally {
+      if (this.dlqWriter) {
+        await this.dlqWriter.close();
       }
     }
   }

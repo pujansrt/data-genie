@@ -18,13 +18,26 @@ export class ParquetWriter<T = DataRecord> implements DataWriter<T> {
   private parquet: any;
   private tempPath: string | null = null;
 
-  constructor(sink: string | DataSink, schema: any) {
+  constructor(sink: string | DataSink, schema?: any) {
     this.sink = ensureDataSink(sink);
     this.schemaConfig = schema;
   }
 
+  /**
+   * Sets the Parquet schema for writing.
+   * Required for ParquetWriter.
+   */
+  public setSchema(schema: any): this {
+    this.schemaConfig = schema;
+    return this;
+  }
+
   private async initialize(): Promise<void> {
     if (this.writer) return;
+
+    if (!this.schemaConfig) {
+      throw new Error("Parquet schema must be provided via constructor or setSchema() before writing.");
+    }
 
     try {
       const module = await import('parquetjs-lite');

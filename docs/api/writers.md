@@ -10,6 +10,12 @@ Writes data as CSV.
 Writes data as a JSON array.
 - **Constructor**: `new JsonWriter(sink)`
 
+## `ParquetWriter<T>`
+Writes data to a Parquet file.
+- **Constructor**: `new ParquetWriter(sink, schema?)`
+- **Methods**:
+    - `setSchema(schema)`: Sets the Parquet schema. Required if not provided in constructor.
+
 ## `SQLWriter<T>`
 Bulk inserts records into a SQL database.
 - **Constructor**: `new SQLWriter(dbClient, insertSql, mapper, options?)`

@@ -27,6 +27,22 @@ export abstract class BaseReader<T = DataRecord> implements DataReader<T> {
   }
 
   /**
+   * Whether to ignore errors during processing.
+   * Base implementation does nothing, should be overridden by readers that support it.
+   */
+  public setIgnoreErrors(value: boolean): this {
+    return this;
+  }
+
+  /**
+   * Sets a DataWriter to act as a Dead Letter Queue (DLQ).
+   * Base implementation does nothing, should be overridden by readers that support it.
+   */
+  public setDLQ(writer: DataWriter<any>): this {
+    return this;
+  }
+
+  /**
    * Runs a job by writing the contents of this reader to the provided writer.
    */
   public async write(writer: DataWriter<T>, options?: JobOptions): Promise<JobMetrics> {
