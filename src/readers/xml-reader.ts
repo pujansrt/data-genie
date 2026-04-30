@@ -1,8 +1,9 @@
 import { BaseReader } from '@/core/base-reader';
-import { DataRecord, DataSource } from '@/core/interfaces';
+import { DataRecord, DataSource, DataWriter } from '@/core/interfaces';
 import { ensureDataSource } from '@/core/transport-utils';
 
 export interface XMLReaderOptions {
+  ignoreErrors?: boolean;
   /** The path to the record, e.g., 'library/book', 'records/record' or '//book' for any depth */
   recordPath: string;
   /** Whether to include attributes, prefixed with '@'. Defaults to true. */
@@ -205,7 +206,7 @@ export class XMLReader<T = DataRecord> extends BaseReader<T> {
             yield recordQueue.shift()!;
           }
         } catch (error) {
-          console.error('[XMLReader] caught error during write:', error.message);
+          console.error('[XMLReader] caught error during write:', error instanceof Error ? error.message : String(error));
           if (this.ignoreErrors) {
             if (this.dlqWriter) {
               await this.dlqWriter.write({
