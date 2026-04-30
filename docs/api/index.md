@@ -23,6 +23,7 @@ The orchestrator that runs the pipeline. It extends `EventEmitter`.
 - **Static Methods**:
   - `Job.run(reader, writer, options)`: Runs a job and returns metrics.
   - `Job.preview(reader, options)`: Prints the first N records to the console.
+  - `Job.inferSchema(reader, options)`: Samples records and generates TypeScript, Zod, and SQL schemas.
 - **Instance Events**:
   - `start`: `{ startTime }`
   - `record`: `DataRecord`

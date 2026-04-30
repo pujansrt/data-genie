@@ -36,11 +36,14 @@ export default withMermaid(
             items: [
               { text: 'Introduction', link: '/cookbook/index' },
               { text: 'CSV to PostgreSQL', link: '/cookbook/csv-to-postgres' },
+              { text: 'SQL Upserts (Idempotent Sync)', link: '/cookbook/sql-upsert' },
               { text: 'CSV to S3 (JSON/Parquet)', link: '/cookbook/csv-to-s3' },
               { text: 'S3 to JSON', link: '/cookbook/s3-to-json' },
               { text: 'CSV to Parquet', link: '/cookbook/csv-to-parquet' },
               { text: 'Filtering Data', link: '/cookbook/filtering' },
               { text: 'Validation & DLQ', link: '/cookbook/validation-dlq' },
+              { text: 'PII Masking & Anonymization', link: '/cookbook/pii-masking' },
+              { text: 'Parallel Processing (Multi-Threading)', link: '/cookbook/parallel-processing' },
               { text: 'Multi-Sink Parallel', link: '/cookbook/multi-sink' },
               { text: 'Memory & Callbacks', link: '/cookbook/memory-and-callbacks' },
               { text: 'Real-time Web Dashboard', link: '/cookbook/web-ui-dashboard' }

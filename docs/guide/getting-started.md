@@ -53,3 +53,20 @@ const reader = new CSVReader('large_data.csv');
 // Displays a beautiful table in the console
 await Job.preview(reader, { limit: 5 });
 ```
+
+## Generating Schemas Instantly
+
+Don't waste time writing schemas for 100-column CSV files. Let Data-Genie infer them for you.
+
+```typescript
+import { CSVReader, Job } from '@pujansrt/data-genie';
+
+const reader = new CSVReader('complex_data.csv');
+
+// Sample first 1000 records and generate schemas
+const schema = await Job.inferSchema(reader);
+
+console.log(schema.typescript); // Ready-to-use Interface
+console.log(schema.zod);        // Ready-to-use Validation
+console.log(schema.sql);        // Ready-to-use CREATE TABLE
+```

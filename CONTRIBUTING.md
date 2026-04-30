@@ -37,17 +37,9 @@ pipeline:
   write: { type: 'postgres', table: 'active_users' }
 ```
 Run via `data-genie run pipeline.yaml` command.
-* Error Resilience & DLQ - In ETL, one bad record should usually not crash a 1-million-record job.
-    * Error Policies: Allow users to set a policy: `STOP_ON_ERROR`, `LOG_AND_CONTINUE`, or `REDIRECT_TO_DLQ`.
-    * DLQ Support: Automatically send records that fail validation or transformation to a separate DataSink (e.g., a failed_records.json file) so they can be fixed and re-processed
-      later.
 * **Multi-file Glob Support** - Currently, CSVReader usually points to a single file.
   * Feature: Allow the source to be a glob pattern (e.g., input/data/*.csv). A CompositeReader could then iterate through all matching files and stream them as one continuous data
     source.
-* **Auto-Schema Inference & DDL Generator** - One of the most tedious parts of ETL is manually creating Zod schemas or SQL tables.
-  * Feature: A utility function inferSchema(reader) that samples the first 100-1000 records and generates:
-    * A suggested Zod schema.
-    * A SQL `CREATE TABLE` script with the correct data types. 
 * Join & Enrichment Reader - ETL often requires "joining" two streams.
   * Feature: A LookupTransformer that can perform an in-memory join against a smaller reference dataset (e.g., "Join these transactions with this currency_codes.json file to add a
     symbol field").

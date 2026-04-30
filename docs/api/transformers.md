@@ -21,3 +21,13 @@ Validate records against a Zod schema.
 ## `GroupByReader`
 Aggregates records based on a key.
 - **Constructor**: `new GroupByReader(reader, groupByField, aggregateConfig)`
+
+## `PIIMaskingTransformer`
+Anonymize sensitive data (Emails, Credit Cards, etc.) during the stream.
+- **Methods**:
+  - `mask(fieldName, strategy)`: Register a field for masking.
+- **Strategies**:
+  - `redact`: Replaces with `[REDACTED]`.
+  - `hash`: Replaces with a SHA256 hash.
+  - `partial`: Intelligent masking (e.g., `p****@domain.com`).
+  - `null`: Sets the field to `null`.

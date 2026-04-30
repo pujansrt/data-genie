@@ -25,6 +25,7 @@ export { ParquetWriter } from './writers/parquet-writer';
 export { XMLWriter } from './writers/xml-writer';
 export { CallbackWriter } from './writers/callback-writer';
 export { BatchCallbackWriter } from './writers/batch-callback-writer';
+export { ParallelWriter, setupWorker } from './writers/parallel-writer';
 
 // Transports
 export { FileSource, FileSink } from './core/file-transport';
@@ -45,7 +46,8 @@ export {
   SetField, 
   SelectFields, 
   BasicFieldTransformer, 
-  MapFields 
+  MapFields,
+  PIIMaskingTransformer
 } from './transformers/field-transformers';
 
 export { FilteringReader } from './filters/filtering-reader';

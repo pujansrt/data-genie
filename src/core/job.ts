@@ -21,6 +21,13 @@ export interface JobOptions {
   showProgress?: boolean;
 }
 
+export interface InferredSchema {
+  fields: Record<string, { type: string; nullable: boolean }>;
+  typescript: string;
+  zod: string;
+  sql: string;
+}
+
 /**
  * Job class orchestrates the data pipeline by reading from a DataReader
  * and writing to a DataWriter. It extends EventEmitter to provide
@@ -153,5 +160,114 @@ export class Job<T = DataRecord> extends EventEmitter {
       console.table(previewRecords);
       logger.info(`--- Preview Complete (${previewRecords.length} records shown) ---`);
     }
+  }
+
+  /**
+   * Samples the first N records from a reader and generates a schema.
+   * Useful for quickly bootstrapping TypeScript types, Zod schemas, or SQL tables.
+   */
+  public static async inferSchema<T = DataRecord>(
+    reader: DataReader<T>,
+    options: { sampleSize?: number; tableName?: string; interfaceName?: string } = {}
+  ): Promise<InferredSchema> {
+    const sampleSize = options.sampleSize || 1000;
+    const tableName = options.tableName || 'inferred_table';
+    const interfaceName = options.interfaceName || 'InferredRecord';
+    
+    const fieldStats: Record<string, { types: Set<string>; nullable: boolean }> = {};
+    let count = 0;
+
+    for await (const record of reader.read()) {
+      const data = record as any;
+      if (!data || typeof data !== 'object') continue;
+
+      for (const [key, value] of Object.entries(data)) {
+        if (!fieldStats[key]) {
+          fieldStats[key] = { types: new Set(), nullable: false };
+        }
+
+        if (value === null || value === undefined) {
+          fieldStats[key].nullable = true;
+          continue;
+        }
+
+        const type = typeof value;
+        if (type === 'object') {
+          if (value instanceof Date) {
+            fieldStats[key].types.add('date');
+          } else {
+            fieldStats[key].types.add('object');
+          }
+        } else {
+          fieldStats[key].types.add(type);
+        }
+      }
+
+      count++;
+      if (count >= sampleSize) break;
+    }
+
+    const fields: Record<string, { type: string; nullable: boolean }> = {};
+    for (const [key, stats] of Object.entries(fieldStats)) {
+      // Determine most dominant type, default to string
+      let type = 'string';
+      if (stats.types.has('date')) type = 'date';
+      else if (stats.types.has('object')) type = 'object';
+      else if (stats.types.has('number')) type = 'number';
+      else if (stats.types.has('boolean')) type = 'boolean';
+      
+      fields[key] = { type, nullable: stats.nullable };
+    }
+
+    return {
+      fields,
+      typescript: this.generateTypeScript(interfaceName, fields),
+      zod: this.generateZod(fields),
+      sql: this.generateSQL(tableName, fields),
+    };
+  }
+
+  private static generateTypeScript(name: string, fields: Record<string, { type: string; nullable: boolean }>): string {
+    const lines = [`export interface ${name} {`];
+    for (const [key, info] of Object.entries(fields)) {
+      let tsType = info.type === 'date' ? 'Date' : info.type === 'object' ? 'any' : info.type;
+      const optional = info.nullable ? '?' : '';
+      lines.push(`  ${key}${optional}: ${tsType}${info.nullable ? ' | null' : ''};`);
+    }
+    lines.push('}');
+    return lines.join('\n');
+  }
+
+  private static generateZod(fields: Record<string, { type: string; nullable: boolean }>): string {
+    const lines = ["import { z } from 'zod';", "", "export const InferredSchema = z.object({"];
+    for (const [key, info] of Object.entries(fields)) {
+      let zodType = 'z.string()';
+      if (info.type === 'number') zodType = 'z.number()';
+      if (info.type === 'boolean') zodType = 'z.boolean()';
+      if (info.type === 'date') zodType = 'z.date()';
+      if (info.type === 'object') zodType = 'z.any()';
+      
+      let line = `  ${key}: ${zodType}`;
+      if (info.nullable) line += '.nullable().optional()';
+      lines.push(line + ',');
+    }
+    lines.push('});');
+    return lines.join('\n');
+  }
+
+  private static generateSQL(tableName: string, fields: Record<string, { type: string; nullable: boolean }>): string {
+    const lines = [`CREATE TABLE ${tableName} (`];
+    const columns = Object.entries(fields).map(([key, info]) => {
+      let sqlType = 'VARCHAR(255)';
+      if (info.type === 'number') sqlType = 'DECIMAL(18, 2)';
+      if (info.type === 'boolean') sqlType = 'BOOLEAN';
+      if (info.type === 'date') sqlType = 'TIMESTAMP';
+      if (info.type === 'object') sqlType = 'JSONB';
+      
+      return `  ${key} ${sqlType}${info.nullable ? '' : ' NOT NULL'}`;
+    });
+    lines.push(columns.join(',\n'));
+    lines.push(');');
+    return lines.join('\n');
   }
 }

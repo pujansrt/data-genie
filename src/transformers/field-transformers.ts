@@ -207,3 +207,67 @@ export class MapFields {
     };
   }
 }
+
+/**
+ * PIIMaskingTransformer provides various strategies to anonymize sensitive data 
+ * such as Emails, Credit Cards, or Names during the streaming process.
+ */
+export class PIIMaskingTransformer {
+  private fields: Map<string, 'redact' | 'hash' | 'partial' | 'null'> = new Map();
+
+  /**
+   * Register a field to be masked.
+   * @param fieldName The field to mask
+   * @param strategy 'redact' (default), 'hash' (SHA256), 'partial' (p****@x.com), or 'null'
+   */
+  public mask(fieldName: string, strategy: 'redact' | 'hash' | 'partial' | 'null' = 'redact'): this {
+    this.fields.set(fieldName, strategy);
+    return this;
+  }
+
+  public transform(): RecordTransformation {
+    return (record: DataRecord) => {
+      for (const [field, strategy] of this.fields) {
+        if (record[field] !== undefined && record[field] !== null) {
+          record[field] = this.applyStrategy(record[field], strategy);
+        }
+      }
+      return record;
+    };
+  }
+
+  private applyStrategy(value: any, strategy: 'redact' | 'hash' | 'partial' | 'null'): any {
+    const val = String(value);
+    switch (strategy) {
+      case 'redact':
+        return '[REDACTED]';
+      case 'null':
+        return null;
+      case 'hash':
+        // Using Node's native crypto module
+        const { createHash } = require('node:crypto');
+        return createHash('sha256').update(val).digest('hex');
+      case 'partial':
+        return this.applyPartialMask(val);
+      default:
+        return '[REDACTED]';
+    }
+  }
+
+  private applyPartialMask(val: string): string {
+    if (val.includes('@')) {
+      // Email masking: p****@domain.com
+      const [user, domain] = val.split('@');
+      if (user.length <= 2) return `*${user.slice(-1)}@${domain}`;
+      return `${user[0]}****@${domain}`;
+    }
+    
+    // Credit Card or long numbers: **** **** **** 4444
+    if (val.length > 10) {
+      return `****${val.slice(-4)}`;
+    }
+
+    // Default partial: first 2 chars then ****
+    return val.length > 2 ? `${val.slice(0, 2)}****` : '****';
+  }
+}

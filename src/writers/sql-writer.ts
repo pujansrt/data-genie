@@ -15,6 +15,8 @@ export class SQLWriter implements DataWriter {
   private buffer: DataRecord[] = [];
   private useTransaction: boolean = false;
   private transactionStarted: boolean = false;
+  private dialect: 'postgres' | 'mysql' | 'sqlite' | 'oracle' = 'postgres';
+  private conflictKey: string | null = null;
 
   /**
    * Constructs a new SQLWriter.
@@ -27,6 +29,25 @@ export class SQLWriter implements DataWriter {
     }
     this.dbClient = dbClient;
     this.tableName = tableName;
+  }
+
+  /**
+   * Sets the SQL dialect for specific features like Upserts.
+   * Default is 'postgres'.
+   */
+  public setDialect(dialect: 'postgres' | 'mysql' | 'sqlite' | 'oracle'): this {
+    this.dialect = dialect;
+    return this;
+  }
+
+  /**
+   * Enables Upsert (Idempotent writing).
+   * If a record with the same conflictKey exists, it will be updated instead of inserted.
+   * @param key The primary key or unique column name to check for conflicts (e.g., 'id' or 'email').
+   */
+  public setUpsert(key: string): this {
+    this.conflictKey = key;
+    return this;
   }
 
   /**
@@ -89,6 +110,11 @@ export class SQLWriter implements DataWriter {
   private async flush(): Promise<void> {
     if (this.buffer.length === 0) return;
 
+    if (this.dialect === 'oracle') {
+      await this.flushOracle();
+      return;
+    }
+
     const columns = this.fieldNames.map((name) => `"${name}"`).join(', ');
     
     // Create placeholders for bulk insert: ($1, $2), ($3, $4), ...
@@ -102,7 +128,24 @@ export class SQLWriter implements DataWriter {
       values.push(...this.fieldNames.map((name) => record[name]));
     }
 
-    const sql = `INSERT INTO "${this.tableName}" (${columns}) VALUES ${rows.join(', ')}`;
+    let sql = `INSERT INTO "${this.tableName}" (${columns}) VALUES ${rows.join(', ')}`;
+
+    // Handle Upsert Logic
+    if (this.conflictKey) {
+      if (this.dialect === 'postgres' || this.dialect === 'sqlite') {
+        const updates = this.fieldNames
+          .filter(name => name !== this.conflictKey)
+          .map(name => `"${name}" = EXCLUDED."${name}"`)
+          .join(', ');
+        sql += ` ON CONFLICT ("${this.conflictKey}") DO UPDATE SET ${updates}`;
+      } else if (this.dialect === 'mysql') {
+        const updates = this.fieldNames
+          .filter(name => name !== this.conflictKey)
+          .map(name => `"${name}" = VALUES("${name}")`)
+          .join(', ');
+        sql += ` ON DUPLICATE KEY UPDATE ${updates}`;
+      }
+    }
 
     try {
       await this.dbClient.query(sql, values);
@@ -114,6 +157,52 @@ export class SQLWriter implements DataWriter {
         this.transactionStarted = false; 
       }
       console.error(`Error in bulk insert into ${this.tableName}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Oracle specific flush logic to handle INSERT ALL and MERGE.
+   */
+  private async flushOracle(): Promise<void> {
+    const columns = this.fieldNames.map(n => `"${n}"`).join(', ');
+    const values: any[] = [];
+    let paramIndex = 1;
+    let sql = '';
+
+    if (this.conflictKey && this.buffer.length === 1) {
+      // Single record MERGE for Upsert
+      const record = this.buffer[0];
+      const updates = this.fieldNames
+        .filter(n => n !== this.conflictKey)
+        .map(n => `target."${n}" = src."${n}"`)
+        .join(', ');
+      
+      const insertValues = this.fieldNames.map(n => `src."${n}"`).join(', ');
+      const srcValues = this.fieldNames.map(() => `:${paramIndex++}`).join(', ');
+      values.push(...this.fieldNames.map(n => record[n]));
+
+      sql = `MERGE INTO "${this.tableName}" target
+              USING (SELECT ${srcValues} FROM DUAL) src
+              ON (target."${this.conflictKey}" = src."${this.conflictKey}")
+              WHEN MATCHED THEN UPDATE SET ${updates}
+              WHEN NOT MATCHED THEN INSERT (${columns}) VALUES (${insertValues})`;
+    } else {
+      // Standard Batch Insert or Batch with no upsert
+      sql = 'INSERT ALL ';
+      for (const record of this.buffer) {
+        const rowValues = this.fieldNames.map(() => `:${paramIndex++}`).join(', ');
+        sql += `INTO "${this.tableName}" (${columns}) VALUES (${rowValues}) `;
+        values.push(...this.fieldNames.map(n => record[n]));
+      }
+      sql += 'SELECT * FROM DUAL';
+    }
+
+    try {
+      await this.dbClient.query(sql, values);
+      this.buffer = [];
+    } catch (error) {
+      console.error(`Error in Oracle ${this.conflictKey ? 'Merge' : 'Insert'}:`, error);
       throw error;
     }
   }

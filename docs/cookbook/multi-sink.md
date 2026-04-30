@@ -40,3 +40,20 @@ run().catch(console.error);
 
 ## Performance Note
 `MultiWriter` waits for **all** underlying writers to complete before pulling the next record from the reader. If one writer is significantly slower than the others, it will determine the overall throughput of the pipeline.
+
+### High-Throughput Fan-out (ParallelWriter)
+If you have a particularly "heavy" sink (e.g., generating complex Parquet files), you can wrap it in a `ParallelWriter` so it doesn't block the main thread and other faster writers:
+
+```typescript
+// Fast writers stay on main thread
+const consoleWriter = new ConsoleWriter();
+
+// Heavy writer is offloaded to background threads
+const heavyWriter = new ParallelWriter({
+  workerPath: './parquet-worker.js',
+  concurrency: 4
+});
+
+const multi = new MultiWriter(consoleWriter, heavyWriter);
+await Job.run(reader, multi);
+```
