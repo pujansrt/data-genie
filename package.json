@@ -52,14 +52,15 @@
     "exceljs": "^4.4.0",
     "jest": "^30.0.3",
     "jest-coverage-badges": "^1.1.2",
+    "mermaid": "^11.14.0",
     "parquetjs-lite": "^0.8.7",
     "prettier": "^3.6.2",
-    "mermaid": "^11.14.0",
-    "vitepress-plugin-mermaid": "^2.0.17",
     "ts-jest": "^29.4.0",
     "tsc-alias": "^1.8.16",
     "tsup": "^8.5.0",
+    "tsx": "^4.21.0",
     "vitepress": "^1.6.4",
+    "vitepress-plugin-mermaid": "^2.0.17",
     "zod": "^4.3.6"
   },
   "jest": {
