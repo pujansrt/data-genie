@@ -7,18 +7,23 @@ import { Job } from '@/core/job';
 describe('ParallelWriter Integration', () => {
   const tempWorkerPath = path.resolve(__dirname, 'temp-integration-worker.js');
   const tempOutputPath = path.resolve(__dirname, 'parallel-output.json');
+  const indexPath = path.resolve(__dirname, '../dist/index.js');
 
   beforeAll(() => {
+    // Ensure dist exists as the worker requires the compiled library
+    if (!fs.existsSync(indexPath)) {
+      throw new Error('Build artifacts missing. Please run "npm run build" before running parallel tests.');
+    }
+
     // Create a simple worker script that writes to a file
-    // We use commonjs and point to the compiled dist/index for stability in tests
+    // We use an absolute path for require to be resilient in CI
     const workerCode = `
-      const { setupWorker } = require('../dist/index');
+      const { setupWorker } = require('${indexPath.replace(/\\/g, '/')}');
       const fs = require('fs');
       
       const fileWriter = {
         write: async (record) => {
-          // Append to a file (simplified shared resource for testing)
-          fs.appendFileSync('${tempOutputPath}', JSON.stringify(record) + '\\n');
+          fs.appendFileSync('${tempOutputPath.replace(/\\/g, '/')}', JSON.stringify(record) + '\\n');
         },
         close: async () => {},
         writeAll: async () => {}
