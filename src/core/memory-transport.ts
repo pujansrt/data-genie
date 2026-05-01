@@ -1,5 +1,5 @@
 import { DataSource, DataSink } from './interfaces';
-import { Readable, Writable, PassThrough } from 'stream';
+import { Readable, Writable } from 'stream';
 
 export class MemorySource implements DataSource {
   constructor(private data: Buffer | string, private identifier: string = 'memory-source') {}
@@ -15,20 +15,35 @@ export class MemorySource implements DataSource {
 
 export class MemorySink implements DataSink {
   private chunks: any[] = [];
-  private passThrough = new PassThrough();
+  private writable: Writable;
 
   constructor(private identifier: string = 'memory-sink') {
-    this.passThrough.on('data', (chunk) => {
-      this.chunks.push(chunk);
+    this.writable = this.createWritable();
+  }
+
+  private createWritable(): Writable {
+    const self = this;
+    return new Writable({
+      write(chunk, encoding, callback) {
+        self.chunks.push(chunk);
+        callback();
+      }
     });
   }
 
   public async getStream(): Promise<Writable> {
-    return this.passThrough;
+    return this.writable;
   }
 
   public async finalize(): Promise<void> {
-    this.passThrough.end();
+    return new Promise((resolve) => {
+        this.writable.end(() => resolve());
+    });
+  }
+
+  public clear(): void {
+    this.chunks = [];
+    this.writable = this.createWritable();
   }
 
   public getData(): Buffer {

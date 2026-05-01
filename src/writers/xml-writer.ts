@@ -18,6 +18,7 @@ export class XMLWriter<T = DataRecord> implements DataWriter<T> {
   private addDeclaration: boolean;
   private isFirstRecord = true;
   private outputStream?: Writable;
+  private isClosed = false;
 
   constructor(sink: string | DataSink, options?: XMLWriterOptions) {
     this.sink = ensureDataSink(sink);
@@ -69,31 +70,15 @@ export class XMLWriter<T = DataRecord> implements DataWriter<T> {
   }
 
   public async close(): Promise<void> {
-    return new Promise(async (resolve, reject) => {
-      if (!this.outputStream) {
-        resolve();
-        return;
-      }
-      
-      if (!this.isFirstRecord) {
-        const canWrite = this.outputStream.write(`</${this.rootTag}>\n`);
-        if (!canWrite) {
-            await new Promise((r) => this.outputStream!.once('drain', r));
-        }
-      } else {
-        // Edge case: no records written but closed, output empty root tag
-        let header = '';
-        if (this.addDeclaration) {
-          header += `<?xml version="1.0" encoding="UTF-8"?>\n`;
-        }
-        header += `<${this.rootTag}></${this.rootTag}>\n`;
-        const canWrite = this.outputStream.write(header);
-        if (!canWrite) {
-            await new Promise((r) => this.outputStream!.once('drain', r));
-        }
-      }
+    if (this.isClosed) return;
+    this.isClosed = true;
 
-      this.outputStream.end(async () => {
+    await this.initializeStream();
+
+    return new Promise(async (resolve, reject) => {
+      const stream = this.outputStream!;
+      
+      stream.on('finish', async () => {
         try {
           if ((this.sink as any).finalize) {
             await (this.sink as any).finalize();
@@ -103,6 +88,26 @@ export class XMLWriter<T = DataRecord> implements DataWriter<T> {
           reject(error);
         }
       });
+
+      if (!this.isFirstRecord) {
+        const canWrite = stream.write(`</${this.rootTag}>\n`);
+        if (!canWrite) {
+            await new Promise((r) => stream.once('drain', r));
+        }
+      } else {
+        // Edge case: no records written but closed, output empty root tag
+        let header = '';
+        if (this.addDeclaration) {
+          header += `<?xml version="1.0" encoding="UTF-8"?>\n`;
+        }
+        header += `<${this.rootTag}></${this.rootTag}>\n`;
+        const canWrite = stream.write(header);
+        if (!canWrite) {
+            await new Promise((r) => stream.once('drain', r));
+        }
+      }
+
+      stream.end();
     });
   }
 
