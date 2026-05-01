@@ -1,17 +1,44 @@
 # Pipelines
 
-Pipelines allow you to chain multiple operations together to transform data as it moves from the Source to the Sink.
+Pipelines allow you to chain multiple operations together to transform data as it moves from the Source to the Sink. Data-Genie supports both **Code-based** and **Config-based** pipelines.
 
-## Anatomy of a Pipeline
+## 1. Declarative Pipelines (YAML)
 
-A typical pipeline consists of:
-1. **Source**: Where the data starts (e.g., `CSVReader`).
-2. **Middleware**: One or more Transformers or Filters.
-3. **Sink**: Where the data ends (e.g., `SQLWriter`).
+Declarative pipelines allow you to define your ETL logic in a YAML configuration file. This is ideal for CI/CD environments, non-TS projects, or simple ETL tasks.
 
-## Fluent Pipeline Construction
+### Example Config
+```yaml
+# my-pipeline.yaml
+job:
+  name: "Daily Sync"
+pipeline:
+  read:
+    type: csv
+    path: raw_data.csv
+  transform:
+    - type: type-convert
+      fields: [price, qty]
+      to: float
+    - type: filter
+      expression: "price > 100"
+    - type: pii-masking
+      masks:
+        email: partial
+  write:
+    type: sql
+    table: orders
+```
 
-Data-Genie readers provide fluent methods to make building pipelines intuitive.
+Run with CLI:
+```bash
+data-genie run my-pipeline.yaml
+```
+
+## 2. Programmatic Pipelines (TypeScript)
+
+Programmatic pipelines offer full control and are best for complex custom logic.
+
+### Fluent Construction
 
 ```typescript
 const pipeline = new CSVReader('users.csv')

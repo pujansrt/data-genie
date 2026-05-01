@@ -2,13 +2,54 @@
 
 ## Installation
 
-Install Data-Genie using your favorite package manager:
-
+### As a Library
+Install Data-Genie for use in your TypeScript/JavaScript project:
 ```bash
 npm install @pujansrt/data-genie
 ```
 
-### Optional Dependencies
+### As a CLI Tool
+Install Data-Genie globally to use the declarative pipeline runner:
+```bash
+npm install -g @pujansrt/data-genie
+```
+
+## Choose Your Path
+
+Data-Genie supports two ways of building ETL pipelines:
+
+1. **Declarative (CLI)**: Define pipelines in YAML. Fast to write, no code needed.
+2. **Programmatic (API)**: Full control via TypeScript. Best for complex logic.
+
+---
+
+## 1. Declarative: YAML Pipelines
+
+Create a `pipeline.yaml` file:
+
+```yaml
+pipeline:
+  read:
+    type: csv
+    path: input.csv
+  transform:
+    - type: filter
+      expression: "age > 18"
+    - type: rename
+      mapping: { fname: firstName }
+  write:
+    type: json
+    path: output.json
+```
+
+Run it instantly:
+```bash
+data-genie run pipeline.yaml
+```
+
+---
+
+## 2. Programmatic: CSV to JSON
 
 Some features require additional peer dependencies. Only install them if you need that specific functionality:
 

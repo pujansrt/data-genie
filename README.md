@@ -20,12 +20,33 @@ Visit our full documentation site for in-depth guides, API reference, and real-w
 ## Installation
 
 ```bash
+# Install as a library
 npm install @pujansrt/data-genie
+
+# OR install globally to use the CLI
+npm install -g @pujansrt/data-genie
 ```
 
-> **Note:** `zod`, `@aws-sdk/client-s3`, and `exceljs` are optional peer dependencies in case you need them.
+## Declarative Pipelines (CLI)
 
-## Quick Start (Convert 1 Million records CSV to JSON in 3sec)
+Instead of writing code, you can define your ETL pipelines in YAML and run them using the `data-genie` CLI.
+
+```yaml
+# pipeline.yaml
+pipeline:
+  read: { type: csv, path: input.csv }
+  transform:
+    - { type: filter, expression: "age > 18" }
+    - { type: rename, mapping: { fname: firstName } }
+  write: { type: json, path: output.json }
+```
+
+Run it with:
+```bash
+data-genie run pipeline.yaml
+```
+
+## Quick Start (Programmatic)
 
 ![demo](./docs/demo.gif)
 

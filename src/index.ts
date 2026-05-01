@@ -66,5 +66,6 @@ export type { FieldFilterRule } from './filters/field-filters';
 export { FilterExpression } from './filters/filter-expressions';
 
 export { Job, ConsoleLogger } from './core/job';
+export { PipelineParser } from './core/pipeline-parser';
 
 export type { DataRecord, DataReader, DataWriter, Logger, SqlConnection, DataSource, DataSink } from './core/interfaces';
