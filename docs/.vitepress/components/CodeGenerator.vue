@@ -8,13 +8,32 @@ const readerBucket = ref('my-source-bucket')
 const readerKey = ref('data/input.csv')
 const readerUrl = ref('https://api.example.com/data')
 
+// SQL Reader Specifics
+const sqlReaderTable = ref('users')
+
 const useMultiWriter = ref(false)
 const writers = ref([
-  { type: 'JsonWriter', sink: 'file', path: 'output.json', bucket: 'my-dest-bucket', key: 'data/output.json' }
+  { 
+    type: 'JsonWriter', 
+    sink: 'file', 
+    path: 'output.json', 
+    bucket: 'my-dest-bucket', 
+    key: 'data/output.json',
+    sqlTable: 'users',
+    sqlDialect: 'postgres'
+  }
 ])
 
 const addWriter = () => {
-  writers.value.push({ type: 'CSVWriter', sink: 'file', path: `output_${writers.value.length + 1}.csv`, bucket: 'my-dest-bucket', key: `data/output_${writers.value.length + 1}.csv` })
+  writers.value.push({ 
+    type: 'CSVWriter', 
+    sink: 'file', 
+    path: `output_${writers.value.length + 1}.csv`, 
+    bucket: 'my-dest-bucket', 
+    key: `data/output_${writers.value.length + 1}.csv`,
+    sqlTable: 'users',
+    sqlDialect: 'postgres'
+  })
 }
 const removeWriter = (index) => {
   if (writers.value.length > 1) writers.value.splice(index, 1)
@@ -36,6 +55,8 @@ const addTransform = (type) => {
 
 const removeTransform = (index) => transforms.value.splice(index, 1)
 
+const isFileSink = (type) => !['MemoryWriter', 'ConsoleWriter', 'CallbackWriter', 'SqlWriter'].includes(type)
+
 const generatedCode = computed(() => {
   const imports = new Set(['Job'])
   imports.add(readerType.value)
@@ -47,9 +68,9 @@ const generatedCode = computed(() => {
   
   activeWriters.forEach(w => imports.add(w.type))
   
-  if (readerSource.value === 's3' || activeWriters.some(w => w.sink === 's3')) {
+  if (readerSource.value === 's3' || activeWriters.some(w => w.sink === 's3' && isFileSink(w.type))) {
     imports.add('S3Source')
-    if (activeWriters.some(w => w.sink === 's3')) imports.add('S3Sink')
+    if (activeWriters.some(w => w.sink === 's3' && isFileSink(w.type))) imports.add('S3Sink')
   }
 
   if (useValidation.value) imports.add('ValidatingReader')
@@ -84,7 +105,7 @@ const generatedCode = computed(() => {
   } else if (readerType.value === 'MemoryReader') {
     code += `const reader = new MemoryReader([{ id: 1, name: 'Sample' }]);\n\n`
   } else if (readerType.value === 'SqlReader') {
-    code += `const reader = new SqlReader(dbConnection, 'SELECT * FROM users');\n\n`
+    code += `const reader = new SqlReader(dbConnection, 'SELECT * FROM ${sqlReaderTable.value}');\n\n`
   } else {
     code += `const reader = new ${readerType.value}('${readerPath.value}');\n\n`
   }
@@ -113,14 +134,14 @@ const generatedCode = computed(() => {
   // Writers Setup
   const writerCodes = activeWriters.map(w => {
     let wCode = ''
-    if (w.sink === 's3') {
+    if (w.sink === 's3' && isFileSink(w.type)) {
       wCode = `new ${w.type}(new S3Sink(s3Client, '${w.bucket}', '${w.key}'))`
     } else if (w.type === 'MemoryWriter' || w.type === 'ConsoleWriter') {
       wCode = `new ${w.type}()`
     } else if (w.type === 'CallbackWriter') {
-      wCode = `new CallbackWriter(async (record) => { /* logic */ })`
+      wCode = `new CallbackWriter(async (record) => { /* process record */ })`
     } else if (w.type === 'SqlWriter') {
-      wCode = `new SqlWriter(dbConnection, 'table', (r) => ({ ...r }))`
+      wCode = `new SqlWriter(dbConnection, '${w.sqlTable}', (r) => ({ ...r }))\n    .setDialect('${w.sqlDialect}')`
     } else {
       wCode = `new ${w.type}('${w.path}')`
     }
@@ -175,48 +196,60 @@ const copyToClipboard = () => {
       <div class="control-grid">
         <section class="card">
           <div class="label">📥 Source Reader</div>
-          <div class="sub-label">Transport</div>
-          <div class="segmented-control">
-            <label :class="{ active: readerSource === 'file' }">
-              <input type="radio" v-model="readerSource" value="file" /> File
-            </label>
-            <label :class="{ active: readerSource === 's3' }">
-              <input type="radio" v-model="readerSource" value="s3" /> S3
-            </label>
-            <label :class="{ active: readerSource === 'http' }">
-              <input type="radio" v-model="readerSource" value="http" /> HTTP
-            </label>
+          
+          <div class="sub-label">Format</div>
+          <select v-model="readerType">
+            <optgroup label="Standard">
+              <option value="CSVReader">CSV Reader</option>
+              <option value="JsonReader">JSON Reader</option>
+              <option value="NDJsonReader">NDJSON Reader</option>
+            </optgroup>
+            <optgroup label="Advanced">
+              <option value="ParquetReader">Parquet Reader</option>
+              <option value="XMLReader">XML Reader</option>
+              <option value="XlsxReader">Excel Reader</option>
+            </optgroup>
+            <optgroup label="Specialized">
+              <option value="MemoryReader">Memory Reader</option>
+              <option value="SqlReader">SQL Reader</option>
+              <option value="HttpReader">HTTP Reader</option>
+            </optgroup>
+          </select>
+
+          <div v-if="readerType !== 'MemoryReader' && readerType !== 'SqlReader' && readerType !== 'HttpReader'">
+            <div class="sub-label">Transport</div>
+            <div class="segmented-control">
+              <label :class="{ active: readerSource === 'file' }">
+                <input type="radio" v-model="readerSource" value="file" /> File
+              </label>
+              <label :class="{ active: readerSource === 's3' }">
+                <input type="radio" v-model="readerSource" value="s3" /> S3
+              </label>
+            </div>
           </div>
           
+          <!-- Path Inputs -->
           <div v-if="readerSource === 'file' && !['MemoryReader', 'SqlReader', 'HttpReader'].includes(readerType)" class="input-stack">
             <div class="sub-label">File Path</div>
             <input v-model="readerPath" />
           </div>
           
-          <div v-if="readerSource === 's3'" class="input-stack">
+          <div v-if="readerSource === 's3' && !['MemoryReader', 'SqlReader', 'HttpReader'].includes(readerType)" class="input-stack">
             <div class="sub-label">Bucket</div>
             <input v-model="readerBucket" />
             <div class="sub-label">Key</div>
             <input v-model="readerKey" />
           </div>
 
-          <div v-if="readerSource === 'http' || readerType === 'HttpReader'" class="input-stack">
+          <div v-if="readerType === 'HttpReader'" class="input-stack">
             <div class="sub-label">URL</div>
             <input v-model="readerUrl" />
           </div>
 
-          <div class="sub-label">Format</div>
-          <select v-model="readerType">
-            <option value="CSVReader">CSV Reader</option>
-            <option value="JsonReader">JSON Reader</option>
-            <option value="NDJsonReader">NDJSON Reader</option>
-            <option value="ParquetReader">Parquet Reader</option>
-            <option value="XMLReader">XML Reader</option>
-            <option value="XlsxReader">Excel Reader</option>
-            <option value="MemoryReader">Memory Reader</option>
-            <option value="SqlReader">SQL Reader</option>
-            <option value="HttpReader">HTTP Reader</option>
-          </select>
+          <div v-if="readerType === 'SqlReader'" class="input-stack">
+            <div class="sub-label">Table Name</div>
+            <input v-model="sqlReaderTable" />
+          </div>
         </section>
 
         <section class="card">
@@ -233,62 +266,11 @@ const copyToClipboard = () => {
              </label>
           </div>
 
-          <div v-if="!useMultiWriter" class="single-writer-box card-nested">
-            <div class="sub-label">Transport</div>
-            <div class="segmented-control">
-              <label :class="{ active: writers[0].sink === 'file' }">
-                <input type="radio" v-model="writers[0].sink" value="file" /> File
-              </label>
-              <label :class="{ active: writers[0].sink === 's3' }">
-                <input type="radio" v-model="writers[0].sink" value="s3" /> S3
-              </label>
-            </div>
-
-            <div v-if="writers[0].sink === 'file' && !['MemoryWriter', 'ConsoleWriter', 'CallbackWriter', 'SqlWriter'].includes(writers[0].type)" class="input-stack">
-              <input v-model="writers[0].path" placeholder="Path" />
-            </div>
-            <div v-if="writers[0].sink === 's3'" class="input-stack">
-              <input v-model="writers[0].bucket" placeholder="Bucket" />
-              <input v-model="writers[0].key" placeholder="Key" class="mt-1" />
-            </div>
-
-            <div class="sub-label">Format</div>
-            <select v-model="writers[0].type">
-              <option value="JsonWriter">JSON Writer</option>
-              <option value="CSVWriter">CSV Writer</option>
-              <option value="NDJsonWriter">NDJSON Writer</option>
-              <option value="ParquetWriter">Parquet Writer</option>
-              <option value="XMLWriter">XML Writer</option>
-              <option value="SqlWriter">SQL Writer</option>
-              <option value="ConsoleWriter">Console Writer</option>
-              <option value="MemoryWriter">Memory Writer</option>
-              <option value="CallbackWriter">Callback Writer</option>
-            </select>
-          </div>
-
-          <div v-else class="multi-writer-list">
-            <div v-for="(w, idx) in writers" :key="idx" class="writer-item card-nested">
+          <div class="writers-container">
+            <div v-for="(w, idx) in (useMultiWriter ? writers : [writers[0]])" :key="idx" class="writer-item card-nested">
               <div class="writer-header">
                 <span>Writer #{{ idx + 1 }}</span>
-                <button v-if="writers.length > 1" @click="removeWriter(idx)" class="del-btn">×</button>
-              </div>
-              
-              <div class="sub-label">Transport</div>
-              <div class="segmented-control small">
-                <label :class="{ active: w.sink === 'file' }">
-                  <input type="radio" v-model="w.sink" value="file" /> File
-                </label>
-                <label :class="{ active: w.sink === 's3' }">
-                  <input type="radio" v-model="w.sink" value="s3" /> S3
-                </label>
-              </div>
-
-              <div v-if="w.sink === 'file' && !['MemoryWriter', 'ConsoleWriter', 'CallbackWriter', 'SqlWriter'].includes(w.type)" class="input-stack">
-                <input v-model="w.path" placeholder="Path" />
-              </div>
-              <div v-if="w.sink === 's3'" class="input-stack">
-                <input v-model="w.bucket" placeholder="Bucket" />
-                <input v-model="w.key" placeholder="Key" class="mt-1" />
+                <button v-if="useMultiWriter && writers.length > 1" @click="removeWriter(idx)" class="del-btn">×</button>
               </div>
 
               <div class="sub-label">Format</div>
@@ -303,6 +285,40 @@ const copyToClipboard = () => {
                 <option value="MemoryWriter">Memory Writer</option>
                 <option value="CallbackWriter">Callback Writer</option>
               </select>
+              
+              <!-- Conditional Transport -->
+              <div v-if="isFileSink(w.type)">
+                <div class="sub-label">Transport</div>
+                <div class="segmented-control small">
+                  <label :class="{ active: w.sink === 'file' }">
+                    <input type="radio" v-model="w.sink" value="file" /> File
+                  </label>
+                  <label :class="{ active: w.sink === 's3' }">
+                    <input type="radio" v-model="w.sink" value="s3" /> S3
+                  </label>
+                </div>
+
+                <div v-if="w.sink === 'file'" class="input-stack">
+                  <input v-model="w.path" placeholder="Path" />
+                </div>
+                <div v-if="w.sink === 's3'" class="input-stack">
+                  <input v-model="w.bucket" placeholder="Bucket" />
+                  <input v-model="w.key" placeholder="Key" class="mt-1" />
+                </div>
+              </div>
+
+              <!-- SQL Writer Specifics -->
+              <div v-if="w.type === 'SqlWriter'" class="input-stack">
+                <div class="sub-label">Dialect</div>
+                <select v-model="w.sqlDialect">
+                  <option value="postgres">PostgreSQL</option>
+                  <option value="mysql">MySQL</option>
+                  <option value="sqlite">SQLite</option>
+                  <option value="oracle">Oracle</option>
+                </select>
+                <div class="sub-label">Target Table</div>
+                <input v-model="w.sqlTable" placeholder="Table Name" />
+              </div>
             </div>
           </div>
 
