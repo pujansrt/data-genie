@@ -26,7 +26,8 @@ export default withMermaid(
             text: 'Core Concepts',
             items: [
               { text: 'Streaming & Memory', link: '/guide/streaming' },
-              { text: 'Pipelines', link: '/guide/pipelines' }
+              { text: 'Pipelines', link: '/guide/pipelines' },
+              { text: 'Declarative Pipelines', link: '/guide/declarative-pipelines' }
             ]
           }
         ],

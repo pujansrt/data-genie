@@ -47,6 +47,8 @@ Run it instantly:
 data-genie run pipeline.yaml
 ```
 
+See the [Declarative Pipelines Guide](./declarative-pipelines.md) for full documentation on the YAML schema and all supported options.
+
 ---
 
 ## 2. Programmatic: CSV to JSON
