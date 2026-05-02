@@ -21,8 +21,6 @@ Data-Genie supports two ways of building ETL pipelines:
 1. **Declarative (CLI)**: Define pipelines in YAML. Fast to write, no code needed.
 2. **Programmatic (API)**: Full control via TypeScript. Best for complex logic.
 
----
-
 ## 1. Declarative: YAML Pipelines
 
 Create a `pipeline.yaml` file:
@@ -33,10 +31,7 @@ pipeline:
     type: csv
     path: input.csv
   transform:
-    - type: filter
-      expression: "age > 18"
-    - type: rename
-      mapping: { fname: firstName }
+    ...
   write:
     type: json
     path: output.json
@@ -47,7 +42,19 @@ Run it instantly:
 data-genie run pipeline.yaml
 ```
 
----
+See the [Declarative Pipelines Guide](./declarative-pipelines.md) for full documentation on the YAML schema and all supported options.
+
+## Interactive Code Generator
+
+Use the interactive generator below to build your TypeScript pipeline:
+
+<script setup>
+import CodeGenerator from '../.vitepress/components/CodeGenerator.vue'
+</script>
+
+<CodeGenerator />
+
+
 
 ## 2. Programmatic: CSV to JSON
 

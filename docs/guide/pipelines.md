@@ -2,39 +2,13 @@
 
 Pipelines allow you to chain multiple operations together to transform data as it moves from the Source to the Sink. Data-Genie supports both **Code-based** and **Config-based** pipelines.
 
-## 1. Declarative Pipelines (YAML)
+## Declarative Pipelines (YAML)
 
 Declarative pipelines allow you to define your ETL logic in a YAML configuration file. This is ideal for CI/CD environments, non-TS projects, or simple ETL tasks.
 
-### Example Config
-```yaml
-# my-pipeline.yaml
-job:
-  name: "Daily Sync"
-pipeline:
-  read:
-    type: csv
-    path: raw_data.csv
-  transform:
-    - type: type-convert
-      fields: [price, qty]
-      to: float
-    - type: filter
-      expression: "price > 100"
-    - type: pii-masking
-      masks:
-        email: partial
-  write:
-    type: sql
-    table: orders
-```
+See the [Declarative Pipelines Guide](./declarative-pipelines.md) for full documentation on the YAML schema and CLI usage.
 
-Run with CLI:
-```bash
-data-genie run my-pipeline.yaml
-```
-
-## 2. Programmatic Pipelines (TypeScript)
+## Programmatic Pipelines (TypeScript)
 
 Programmatic pipelines offer full control and are best for complex custom logic.
 

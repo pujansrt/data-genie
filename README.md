@@ -74,6 +74,15 @@ await Job.preview(pipeline);
 
 ---
 
+## Interactive Tools
+
+Build your pipelines visually without writing code from scratch:
+
+- **[Declarative Pipeline Builder](https://pujansrt.github.io/data-genie/guide/declarative-pipelines)**: Visually configure your YAML pipelines and copy the generated config.
+- **[TypeScript Code Generator](https://pujansrt.github.io/data-genie/guide/getting-started)**: Generate full TypeScript boilerplate for complex ETL tasks (S3, SQL, Validation, etc.).
+
+---
+
 ## Why Data-Genie? (Performance Benchmark)
 
 In our latest benchmarks (Processing 500k records), Data-Genie used **100x less memory** than standard array-based processing.
