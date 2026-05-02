@@ -52,6 +52,8 @@ const addTransform = (type) => {
   if (type === 'filter') transforms.value.push({ type: 'filter', expr: 'record.age > 18' })
   if (type === 'calculate') transforms.value.push({ type: 'calculate', field: 'total', expr: 'record.price * record.qty' })
   if (type === 'mask') transforms.value.push({ type: 'mask', field: 'email', strategy: 'redact' })
+  if (type === 'remove') transforms.value.push({ type: 'remove', fields: 'password, internal_id' })
+  if (type === 'custom') transforms.value.push({ type: 'custom', body: 'return { ...record, customField: true };' })
 }
 
 const removeTransform = (index) => transforms.value.splice(index, 1)
@@ -75,17 +77,13 @@ const generatedCode = computed(() => {
   }
 
   if (useValidation.value) imports.add('ValidatingReader')
-  if (transforms.value.some(t => t.type === 'rename' || t.type === 'calculate')) {
-    imports.add('TransformingReader')
-    if (transforms.value.some(t => t.type === 'rename')) imports.add('RenameField')
-    if (transforms.value.some(t => t.type === 'calculate')) imports.add('SetCalculatedField')
-  }
-  if (transforms.value.some(t => t.type === 'filter')) {
-    imports.add('FilteringReader', 'FilterExpression')
-  }
-  if (transforms.value.some(t => t.type === 'mask')) {
-    imports.add('PIIMaskingTransformer')
-  }
+  
+  if (transforms.value.some(t => ['rename', 'calculate', 'mask', 'remove'].includes(t.type))) imports.add('TransformingReader')
+  if (transforms.value.some(t => t.type === 'rename')) imports.add('RenameField')
+  if (transforms.value.some(t => t.type === 'calculate')) imports.add('SetCalculatedField')
+  if (transforms.value.some(t => t.type === 'filter')) imports.add('FilteringReader', 'FilterExpression')
+  if (transforms.value.some(t => t.type === 'mask')) imports.add('PIIMaskingTransformer')
+  if (transforms.value.some(t => t.type === 'remove')) imports.add('RemoveFields')
 
   let code = `import { ${Array.from(imports).sort().join(', ')} } from '@pujansrt/data-genie';\n`
   if (useValidation.value) code += `import { z } from 'zod';\n`
@@ -116,21 +114,49 @@ const generatedCode = computed(() => {
   
   if (useValidation.value) {
     code += `const schema = z.object({ id: z.number(), email: z.string().email() });\n`
-    code += `const validatedReader = new ValidatingReader(${currentVar}, schema);\n`
-    currentVar = 'validatedReader'
+    code += `const validated = new ValidatingReader(${currentVar}, schema);\n`
+    currentVar = 'validated'
   }
 
-  if (transforms.value.length > 0) {
-    code += `const pipeline = new TransformingReader(${currentVar})\n`
-    transforms.value.forEach(t => {
+  // Optimized transformation grouping
+  let groupType = null; // 'transforming', 'filtering', or null
+
+  transforms.value.forEach((t, i) => {
+    const isStructural = ['rename', 'calculate', 'mask', 'remove'].includes(t.type);
+    const isFiltering = t.type === 'filter';
+
+    if (isStructural) {
+      if (groupType !== 'transforming') {
+        if (groupType !== null) code += ';\n';
+        code += `const transformed = new TransformingReader(${currentVar})\n`;
+        groupType = 'transforming';
+      }
+      
       if (t.type === 'rename') code += `  .add(new RenameField('${t.old}', '${t.new}').transform())\n`
       if (t.type === 'calculate') code += `  .add(new SetCalculatedField('${t.field}', '${t.expr}').transform())\n`
       if (t.type === 'mask') code += `  .add(new PIIMaskingTransformer().mask('${t.field}', '${t.strategy}').transform())\n`
-      if (t.type === 'filter') code += `  .add(new FilterExpression('${t.expr}').createRecordFilter())\n`
-    })
-    code += `;\n`
-    currentVar = 'pipeline'
-  }
+      if (t.type === 'remove') {
+        const fields = t.fields.split(',').map(f => `'${f.trim()}'`).join(', ')
+        code += `  .add(new RemoveFields(${fields}).transform())\n`
+      }
+      currentVar = 'transformed';
+    } else if (isFiltering) {
+      if (groupType !== 'filtering') {
+        if (groupType !== null) code += ';\n';
+        code += `const filtered = new FilteringReader(${currentVar})\n`;
+        groupType = 'filtering';
+      }
+      code += `  .add(new FilterExpression('${t.expr}').createRecordFilter())\n`;
+      currentVar = 'filtered';
+    } else if (t.type === 'custom') {
+      if (groupType !== null) code += ';\n';
+      code += `const customized = ${currentVar}.transform((record) => {\n  ${t.body}\n});\n`;
+      currentVar = 'customized';
+      groupType = null;
+    }
+  });
+
+  if (groupType !== null) code += ';\n';
 
   // Writers Setup
   const writerCodes = activeWriters.map(w => {
@@ -140,7 +166,7 @@ const generatedCode = computed(() => {
     } else if (w.type === 'MemoryWriter' || w.type === 'ConsoleWriter') {
       wCode = `new ${w.type}()`
     } else if (w.type === 'CallbackWriter') {
-      wCode = `new CallbackWriter(async (record) => { /* process */ })`
+      wCode = `new CallbackWriter(async (record) => { /* process record */ })`
     } else if (w.type === 'SqlWriter') {
       wCode = `new SqlWriter(dbConnection, '${w.sqlTable}', (r) => ({ ...r }))\n    .setDialect('${w.sqlDialect}')`
     } else {
@@ -158,7 +184,7 @@ const generatedCode = computed(() => {
     finalWriterCode = writerCodes[0]
   }
 
-  code += `const writer = ${finalWriterCode};\n\n`
+  code += `\nconst writer = ${finalWriterCode};\n\n`
 
   // Execution
   code += `async function run() {\n`
@@ -182,6 +208,40 @@ const generatedCode = computed(() => {
 
   return code
 })
+
+const highlightedCode = computed(() => {
+  let code = generatedCode.value;
+  // Escape HTML first to prevent injection but we will replace tokens with real tags
+  code = code.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  
+  // Highlighting: Use a temporary marker to avoid double-processing
+  const tokens = [];
+  let i = 0;
+
+  const addToken = (str, cls) => {
+    const id = `__TOKEN_${i++}__`;
+    tokens.push({ id, html: `<span class="${cls}">${str}</span>` });
+    return id;
+  };
+
+  // Strings
+  code = code.replace(/('.*?'|".*?"|`.*?`)/g, (m) => addToken(m, 'token-string'));
+  // Comments
+  code = code.replace(/\/\/.*/g, (m) => addToken(m, 'token-comment'));
+  // Keywords
+  code = code.replace(/\b(import|from|const|let|async|function|await|new|return|if|else|try|catch)\b/g, (m) => addToken(m, 'token-keyword'));
+  // Classes/Types
+  code = code.replace(/\b(Job|CSVReader|JsonReader|NDJsonReader|ParquetReader|XMLReader|XlsxReader|FixedWidthReader|MemoryReader|SqlReader|HttpReader|JsonWriter|CSVWriter|NDJsonWriter|ParquetWriter|XMLWriter|SqlWriter|ConsoleWriter|MemoryWriter|CallbackWriter|ParallelWriter|MultiWriter|TransformingReader|FilteringReader|ValidatingReader|RenameField|SetCalculatedField|FilterExpression|PIIMaskingTransformer|RemoveFields|S3Source|S3Sink|S3Client)\b/g, (m) => addToken(m, 'token-class'));
+  // Numbers
+  code = code.replace(/\b(\d+)\b/g, (m) => addToken(m, 'token-number'));
+
+  // Put tokens back
+  tokens.forEach(t => {
+    code = code.replace(t.id, t.html);
+  });
+  
+  return code;
+});
 
 const copyToClipboard = () => {
   navigator.clipboard.writeText(generatedCode.value)
@@ -345,6 +405,8 @@ const copyToClipboard = () => {
           <button class="add-btn" @click="addTransform('rename')">+ Rename</button>
           <button class="add-btn" @click="addTransform('calculate')">+ Calc Field</button>
           <button class="add-btn" @click="addTransform('mask')">+ PII Mask</button>
+          <button class="add-btn" @click="addTransform('remove')">+ Remove</button>
+          <button class="add-btn" @click="addTransform('custom')">+ Custom Fn</button>
         </div>
 
         <div class="transform-stack">
@@ -396,6 +458,16 @@ const copyToClipboard = () => {
                   </select>
                 </div>
               </div>
+
+              <div v-if="t.type === 'remove'" class="input-group">
+                <label>Fields (comma separated)</label>
+                <input v-model="t.fields" placeholder="password, internal_id" />
+              </div>
+
+              <div v-if="t.type === 'custom'" class="input-group">
+                <label>Function Body (return new record)</label>
+                <textarea v-model="t.body" class="code-textarea" rows="3"></textarea>
+              </div>
             </div>
           </div>
         </div>
@@ -417,7 +489,7 @@ const copyToClipboard = () => {
         <span>TypeScript Code</span>
         <button class="copy-btn" @click="copyToClipboard">Copy Code</button>
       </div>
-      <pre><code>{{ generatedCode }}</code></pre>
+      <pre><code class="highlighted-code" v-html="highlightedCode"></code></pre>
     </div>
   </div>
 </template>
@@ -426,15 +498,21 @@ const copyToClipboard = () => {
 .code-builder {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 1.5rem;
   margin: 1.5rem 0;
   font-family: var(--vp-font-family-base);
+}
+
+.controls {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
 }
 
 .control-grid {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 1rem;
+  gap: 1.25rem;
 }
 
 @media (min-width: 768px) {
@@ -453,7 +531,7 @@ const copyToClipboard = () => {
   border: 1px solid var(--vp-c-divider);
   border-radius: 6px;
   padding: 0.75rem;
-  margin-bottom: 0.5rem;
+  margin-bottom: 1rem;
 }
 
 .label {
@@ -508,7 +586,7 @@ const copyToClipboard = () => {
 
 .input-stack { display: flex; flex-direction: column; gap: 0.25rem; }
 
-select, input:not([type="radio"]):not([type="checkbox"]) {
+select, input:not([type="radio"]):not([type="checkbox"]), .code-textarea {
   background: var(--vp-c-bg);
   border: 1px solid var(--vp-c-divider);
   border-radius: 4px;
@@ -518,12 +596,17 @@ select, input:not([type="radio"]):not([type="checkbox"]) {
   width: 100%;
 }
 
+.code-textarea {
+  font-family: var(--vp-font-family-mono);
+  resize: vertical;
+}
+
 .input-group { display: flex; flex-direction: column; gap: 0.2rem; flex: 1; }
 .input-group label { font-size: 0.65rem; color: var(--vp-c-text-3); }
 
 .inner-row, .input-row { display: flex; gap: 0.5rem; }
 
-.transform-stack { display: flex; flex-direction: column; gap: 0.75rem; margin-top: 1rem; }
+.transform-stack { display: flex; flex-direction: column; gap: 1rem; margin-top: 1rem; }
 .transform-box {
   background: var(--vp-c-bg);
   border: 1px solid var(--vp-c-divider);
@@ -575,4 +658,11 @@ select, input:not([type="radio"]):not([type="checkbox"]) {
 
 pre { margin: 0; padding: 1rem; color: #d4d4d4; font-size: 0.85rem; overflow-x: auto; }
 code { font-family: var(--vp-font-family-mono); }
+
+/* Syntax Highlighting Tokens */
+:deep(.token-keyword) { color: #c678dd !important; font-weight: bold; }
+:deep(.token-class) { color: #e5c07b !important; }
+:deep(.token-string) { color: #98c379 !important; }
+:deep(.token-comment) { color: #5c6370 !important; font-style: italic; }
+:deep(.token-number) { color: #d19a66 !important; }
 </style>
