@@ -11,7 +11,9 @@ const readerUrl = ref('https://api.example.com/data')
 // SQL Reader Specifics
 const sqlReaderTable = ref('users')
 
-const useMultiWriter = ref(false)
+// Writer Strategy
+const writerMode = ref('single') // single, multi, parallel
+
 const writers = ref([
   { 
     type: 'JsonWriter', 
@@ -42,7 +44,6 @@ const removeWriter = (index) => {
 const useValidation = ref(false)
 const showEvents = ref(false)
 const useEventEmitter = ref(false)
-const useParallel = ref(false)
 
 const transforms = ref([])
 
@@ -61,10 +62,10 @@ const generatedCode = computed(() => {
   const imports = new Set(['Job'])
   imports.add(readerType.value)
   
-  if (useParallel.value) imports.add('ParallelWriter')
+  const activeWriters = writerMode.value === 'multi' ? writers.value : [writers.value[0]]
   
-  const activeWriters = useMultiWriter.value ? writers.value : [writers.value[0]]
-  if (useMultiWriter.value && activeWriters.length > 1) imports.add('MultiWriter')
+  if (writerMode.value === 'multi' && activeWriters.length > 1) imports.add('MultiWriter')
+  if (writerMode.value === 'parallel') imports.add('ParallelWriter')
   
   activeWriters.forEach(w => imports.add(w.type))
   
@@ -139,7 +140,7 @@ const generatedCode = computed(() => {
     } else if (w.type === 'MemoryWriter' || w.type === 'ConsoleWriter') {
       wCode = `new ${w.type}()`
     } else if (w.type === 'CallbackWriter') {
-      wCode = `new CallbackWriter(async (record) => { /* process record */ })`
+      wCode = `new CallbackWriter(async (record) => { /* process */ })`
     } else if (w.type === 'SqlWriter') {
       wCode = `new SqlWriter(dbConnection, '${w.sqlTable}', (r) => ({ ...r }))\n    .setDialect('${w.sqlDialect}')`
     } else {
@@ -149,17 +150,15 @@ const generatedCode = computed(() => {
   })
 
   let finalWriterCode = ''
-  if (useMultiWriter.value && writerCodes.length > 1) {
+  if (writerMode.value === 'multi' && writerCodes.length > 1) {
     finalWriterCode = `new MultiWriter(\n    ${writerCodes.join(',\n    ')}\n  )`
+  } else if (writerMode.value === 'parallel') {
+    finalWriterCode = `new ParallelWriter({\n    workerPath: './worker.js',\n    concurrency: 4\n  })`
   } else {
     finalWriterCode = writerCodes[0]
   }
 
-  if (useParallel.value) {
-    code += `const writer = new ParallelWriter(${finalWriterCode}, { concurrency: 4 });\n\n`
-  } else {
-    code += `const writer = ${finalWriterCode};\n\n`
-  }
+  code += `const writer = ${finalWriterCode};\n\n`
 
   // Execution
   code += `async function run() {\n`
@@ -194,6 +193,7 @@ const copyToClipboard = () => {
   <div class="code-builder">
     <div class="controls">
       <div class="control-grid">
+        <!-- Reader Card -->
         <section class="card">
           <div class="label">📥 Source Reader</div>
           
@@ -228,7 +228,6 @@ const copyToClipboard = () => {
             </div>
           </div>
           
-          <!-- Path Inputs -->
           <div v-if="readerSource === 'file' && !['MemoryReader', 'SqlReader', 'HttpReader'].includes(readerType)" class="input-stack">
             <div class="sub-label">File Path</div>
             <input v-model="readerPath" />
@@ -252,25 +251,36 @@ const copyToClipboard = () => {
           </div>
         </section>
 
+        <!-- Writer Card -->
         <section class="card">
-          <div class="label-row">
-            <div class="label">📤 Destination Writer</div>
-            <div class="multi-toggle" v-if="useMultiWriter">
-              <button class="small-add-btn" @click="addWriter">+ Add Writer</button>
-            </div>
+          <div class="label">📤 Destination Writer</div>
+          
+          <div class="sub-label">Strategy</div>
+          <div class="segmented-control">
+            <label :class="{ active: writerMode === 'single' }">
+              <input type="radio" v-model="writerMode" value="single" /> Direct
+            </label>
+            <label :class="{ active: writerMode === 'multi' }">
+              <input type="radio" v-model="writerMode" value="multi" /> Multi
+            </label>
+            <label :class="{ active: writerMode === 'parallel' }">
+              <input type="radio" v-model="writerMode" value="parallel" /> Parallel
+            </label>
           </div>
 
-          <div class="toggle-row">
-             <label class="checkbox-label">
-               <input type="checkbox" v-model="useMultiWriter" /> Use Multi-Writer
-             </label>
+          <!-- Multi Writer Controls -->
+          <div v-if="writerMode === 'multi'" class="label-row mb-1">
+            <span class="sub-label">Configured Sinks</span>
+            <button class="small-add-btn" @click="addWriter">+ Add</button>
           </div>
 
           <div class="writers-container">
-            <div v-for="(w, idx) in (useMultiWriter ? writers : [writers[0]])" :key="idx" class="writer-item card-nested">
-              <div class="writer-header">
-                <span>Writer #{{ idx + 1 }}</span>
-                <button v-if="useMultiWriter && writers.length > 1" @click="removeWriter(idx)" class="del-btn">×</button>
+            <div v-for="(w, idx) in (writerMode === 'multi' ? writers : [writers[0]])" :key="idx" 
+                 :class="['writer-item card-nested', { 'mb-0': writerMode !== 'multi' }]">
+              
+              <div class="writer-header" v-if="writerMode === 'multi'">
+                <span>Sink #{{ idx + 1 }}</span>
+                <button v-if="writers.length > 1" @click="removeWriter(idx)" class="del-btn">×</button>
               </div>
 
               <div class="sub-label">Format</div>
@@ -286,7 +296,6 @@ const copyToClipboard = () => {
                 <option value="CallbackWriter">Callback Writer</option>
               </select>
               
-              <!-- Conditional Transport -->
               <div v-if="isFileSink(w.type)">
                 <div class="sub-label">Transport</div>
                 <div class="segmented-control small">
@@ -297,37 +306,40 @@ const copyToClipboard = () => {
                     <input type="radio" v-model="w.sink" value="s3" /> S3
                   </label>
                 </div>
-
                 <div v-if="w.sink === 'file'" class="input-stack">
                   <input v-model="w.path" placeholder="Path" />
                 </div>
                 <div v-if="w.sink === 's3'" class="input-stack">
                   <input v-model="w.bucket" placeholder="Bucket" />
-                  <input v-model="w.key" placeholder="Key" class="mt-1" />
+                  <input v-model="w.key" placeholder="Key" />
                 </div>
               </div>
 
-              <!-- SQL Writer Specifics -->
               <div v-if="w.type === 'SqlWriter'" class="input-stack">
-                <div class="sub-label">Dialect</div>
-                <select v-model="w.sqlDialect">
-                  <option value="postgres">PostgreSQL</option>
-                  <option value="mysql">MySQL</option>
-                  <option value="sqlite">SQLite</option>
-                  <option value="oracle">Oracle</option>
-                </select>
-                <div class="sub-label">Target Table</div>
-                <input v-model="w.sqlTable" placeholder="Table Name" />
+                <div class="sub-label">Dialect / Table</div>
+                <div class="inner-row">
+                  <select v-model="w.sqlDialect" style="flex: 1">
+                    <option value="postgres">Postgres</option>
+                    <option value="mysql">MySQL</option>
+                    <option value="sqlite">SQLite</option>
+                    <option value="oracle">Oracle</option>
+                  </select>
+                  <input v-model="w.sqlTable" placeholder="Table" style="flex: 1" />
+                </div>
               </div>
             </div>
           </div>
 
-          <div class="toggle-row mt-2">
-            <label class="checkbox-label"><input type="checkbox" v-model="useParallel" /> Use ParallelWriter</label>
+          <div v-if="writerMode === 'parallel'" class="card-nested mt-2">
+            <div class="label" style="font-size: 0.6rem">ParallelWriter Info</div>
+            <p style="font-size: 0.7rem; margin: 0; opacity: 0.8;">
+              Uses worker threads to offload writing. Requires a separate worker script.
+            </p>
           </div>
         </section>
       </div>
 
+      <!-- Transforms Card -->
       <section class="card">
         <div class="label">⚡ Transformations & Validation</div>
         <div class="toggle-row">
@@ -364,6 +376,7 @@ const copyToClipboard = () => {
         </div>
       </section>
 
+      <!-- Options Card -->
       <section class="card">
         <div class="label">⚙️ Job Options</div>
         <div class="toggle-col">
@@ -373,6 +386,7 @@ const copyToClipboard = () => {
       </section>
     </div>
 
+    <!-- Preview Area -->
     <div class="preview">
       <div class="preview-header">
         <span>TypeScript Code</span>
@@ -421,7 +435,7 @@ const copyToClipboard = () => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 0.75rem;
+  margin-bottom: 0.5rem;
 }
 
 .label {
@@ -439,7 +453,6 @@ const copyToClipboard = () => {
   margin: 0.5rem 0 0.25rem 0;
 }
 
-/* Segmented Control Styling */
 .segmented-control {
   display: flex;
   background: var(--vp-c-bg);
@@ -463,9 +476,7 @@ const copyToClipboard = () => {
   justify-content: center;
 }
 
-.segmented-control input {
-  display: none;
-}
+.segmented-control input { display: none; }
 
 .segmented-control label.active {
   background: var(--vp-c-brand-soft);
@@ -473,10 +484,7 @@ const copyToClipboard = () => {
   font-weight: bold;
 }
 
-.segmented-control.small label {
-  padding: 2px;
-  font-size: 0.7rem;
-}
+.segmented-control.small label { padding: 2px; font-size: 0.7rem; }
 
 .checkbox-label {
   display: flex;
@@ -505,7 +513,8 @@ select, input:not([type="radio"]):not([type="checkbox"]) {
 
 .toggle-row { margin-bottom: 0.75rem; font-size: 0.85rem; }
 .toggle-col { display: flex; flex-direction: column; gap: 0.5rem; font-size: 0.85rem; }
-.mt-1 { margin-top: 0.25rem; }
+.mb-0 { margin-bottom: 0 !important; }
+.mb-1 { margin-bottom: 0.5rem !important; }
 .mt-2 { margin-top: 0.5rem; }
 
 .btn-row { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1rem; }
