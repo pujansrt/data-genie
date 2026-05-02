@@ -20,6 +20,16 @@ data-genie run pipeline.yaml
 
 *Note: Ensure you have installed the CLI globally via `npm i -g @pujansrt/data-genie`*
 
+## Interactive Pipeline Builder
+
+Use the tool below to visually build your pipeline and copy the generated YAML.
+
+<script setup>
+import PipelineBuilder from '../.vitepress/components/PipelineBuilder.vue'
+</script>
+
+<PipelineBuilder />
+
 ## Schema Overview
 
 The following illustrates the full pipeline schema. Mandatory fields are marked with `# *`.
