@@ -53,6 +53,14 @@ See the [Declarative Pipelines Guide](./declarative-pipelines.md) for full docum
 
 ## 2. Programmatic: CSV to JSON
 
+Use the interactive generator below to build your TypeScript pipeline:
+
+<script setup>
+import CodeGenerator from '../.vitepress/components/CodeGenerator.vue'
+</script>
+
+<CodeGenerator />
+
 Some features require additional peer dependencies. Only install them if you need that specific functionality:
 
 - **Zod**: `npm install zod` (for Schema Validation)
