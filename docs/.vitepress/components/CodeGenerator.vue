@@ -89,12 +89,12 @@ const generatedCode = computed(() => {
 
   let code = `import { ${Array.from(imports).sort().join(', ')} } from '@pujansrt/data-genie';\n`
   if (useValidation.value) code += `import { z } from 'zod';\n`
-  if (readerSource.value === 's3' || activeWriters.some(w => w.sink === 's3')) {
+  if (readerSource.value === 's3' || activeWriters.some(w => w.sink === 's3' && isFileSink(w.type))) {
     code += `import { S3Client } from '@aws-sdk/client-s3';\n`
   }
   code += `\n`
 
-  if (readerSource.value === 's3' || activeWriters.some(w => w.sink === 's3')) {
+  if (readerSource.value === 's3' || activeWriters.some(w => w.sink === 's3' && isFileSink(w.type))) {
     code += `const s3Client = new S3Client({ region: 'us-east-1' });\n\n`
   }
 
@@ -228,6 +228,7 @@ const copyToClipboard = () => {
             </div>
           </div>
           
+          <!-- Path Inputs -->
           <div v-if="readerSource === 'file' && !['MemoryReader', 'SqlReader', 'HttpReader'].includes(readerType)" class="input-stack">
             <div class="sub-label">File Path</div>
             <input v-model="readerPath" />
@@ -268,7 +269,6 @@ const copyToClipboard = () => {
             </label>
           </div>
 
-          <!-- Multi Writer Controls -->
           <div v-if="writerMode === 'multi'" class="label-row mb-1">
             <span class="sub-label">Configured Sinks</span>
             <button class="small-add-btn" @click="addWriter">+ Add</button>
@@ -329,49 +329,74 @@ const copyToClipboard = () => {
               </div>
             </div>
           </div>
-
-          <div v-if="writerMode === 'parallel'" class="card-nested mt-2">
-            <div class="label" style="font-size: 0.6rem">ParallelWriter Info</div>
-            <p style="font-size: 0.7rem; margin: 0; opacity: 0.8;">
-              Uses worker threads to offload writing. Requires a separate worker script.
-            </p>
-          </div>
         </section>
       </div>
 
       <!-- Transforms Card -->
       <section class="card">
         <div class="label">⚡ Transformations & Validation</div>
+        
         <div class="toggle-row">
           <label class="checkbox-label"><input type="checkbox" v-model="useValidation" /> Enable Zod Schema Validation</label>
         </div>
+
         <div class="btn-row">
           <button class="add-btn" @click="addTransform('filter')">+ Filter</button>
           <button class="add-btn" @click="addTransform('rename')">+ Rename</button>
           <button class="add-btn" @click="addTransform('calculate')">+ Calc Field</button>
           <button class="add-btn" @click="addTransform('mask')">+ PII Mask</button>
         </div>
-        <div class="list">
-          <div v-for="(t, i) in transforms" :key="i" class="transform-pill">
-            <span class="pill-type">{{ t.type }}</span>
-            <div class="pill-content">
-              <input v-if="t.type === 'filter'" v-model="t.expr" class="full-input" />
-              <div v-if="t.type === 'rename'" class="inner-row">
-                <input v-model="t.old" placeholder="Old" /> <span>→</span> <input v-model="t.new" placeholder="New" />
+
+        <div class="transform-stack">
+          <div v-for="(t, i) in transforms" :key="i" class="transform-box">
+            <div class="transform-header">
+              <span class="pill-type">{{ t.type }}</span>
+              <button class="del-btn" @click="removeTransform(i)">×</button>
+            </div>
+            
+            <div class="transform-body">
+              <div v-if="t.type === 'filter'" class="input-group">
+                <label>Expression</label>
+                <input v-model="t.expr" placeholder="e.g. record.age > 18" />
               </div>
-              <div v-if="t.type === 'calculate'" class="inner-row">
-                <input v-model="t.field" placeholder="Field" /> <span>=</span> <input v-model="t.expr" />
+
+              <div v-if="t.type === 'rename'" class="input-row">
+                <div class="input-group">
+                  <label>From</label>
+                  <input v-model="t.old" placeholder="old_name" />
+                </div>
+                <div class="input-group">
+                  <label>To</label>
+                  <input v-model="t.new" placeholder="new_name" />
+                </div>
               </div>
-              <div v-if="t.type === 'mask'" class="inner-row">
-                <input v-model="t.field" placeholder="Field name" class="field-input" />
-                <select v-model="t.strategy" class="strategy-select">
-                  <option value="redact">redact</option>
-                  <option value="hash">hash</option>
-                  <option value="partial">partial</option>
-                </select>
+
+              <div v-if="t.type === 'calculate'" class="input-row">
+                <div class="input-group">
+                  <label>Field Name</label>
+                  <input v-model="t.field" placeholder="total" />
+                </div>
+                <div class="input-group">
+                  <label>Calculation</label>
+                  <input v-model="t.expr" placeholder="record.price * 1.2" />
+                </div>
+              </div>
+
+              <div v-if="t.type === 'mask'" class="input-row">
+                <div class="input-group">
+                  <label>Field</label>
+                  <input v-model="t.field" placeholder="email" />
+                </div>
+                <div class="input-group">
+                  <label>Strategy</label>
+                  <select v-model="t.strategy">
+                    <option value="redact">redact</option>
+                    <option value="hash">hash</option>
+                    <option value="partial">partial</option>
+                  </select>
+                </div>
               </div>
             </div>
-            <button class="del-btn" @click="removeTransform(i)">×</button>
           </div>
         </div>
       </section>
@@ -431,19 +456,13 @@ const copyToClipboard = () => {
   margin-bottom: 0.5rem;
 }
 
-.label-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 0.5rem;
-}
-
 .label {
   font-size: 0.7rem;
   font-weight: 800;
   text-transform: uppercase;
   color: var(--vp-c-text-2);
   letter-spacing: 0.05em;
+  margin-bottom: 0.5rem;
 }
 
 .sub-label {
@@ -469,37 +488,25 @@ const copyToClipboard = () => {
   padding: 4px;
   cursor: pointer;
   border-radius: 4px;
-  transition: all 0.2s;
   color: var(--vp-c-text-2);
-  display: flex;
-  align-items: center;
-  justify-content: center;
 }
 
 .segmented-control input { display: none; }
-
 .segmented-control label.active {
   background: var(--vp-c-brand-soft);
   color: var(--vp-c-brand-1);
   font-weight: bold;
 }
 
-.segmented-control.small label { padding: 2px; font-size: 0.7rem; }
-
 .checkbox-label {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  cursor: pointer;
   font-size: 0.85rem;
+  cursor: pointer;
 }
 
-.input-stack {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  margin-bottom: 0.5rem;
-}
+.input-stack { display: flex; flex-direction: column; gap: 0.25rem; }
 
 select, input:not([type="radio"]):not([type="checkbox"]) {
   background: var(--vp-c-bg);
@@ -511,13 +518,37 @@ select, input:not([type="radio"]):not([type="checkbox"]) {
   width: 100%;
 }
 
-.toggle-row { margin-bottom: 0.75rem; font-size: 0.85rem; }
-.toggle-col { display: flex; flex-direction: column; gap: 0.5rem; font-size: 0.85rem; }
-.mb-0 { margin-bottom: 0 !important; }
-.mb-1 { margin-bottom: 0.5rem !important; }
-.mt-2 { margin-top: 0.5rem; }
+.input-group { display: flex; flex-direction: column; gap: 0.2rem; flex: 1; }
+.input-group label { font-size: 0.65rem; color: var(--vp-c-text-3); }
 
-.btn-row { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1rem; }
+.inner-row, .input-row { display: flex; gap: 0.5rem; }
+
+.transform-stack { display: flex; flex-direction: column; gap: 0.75rem; margin-top: 1rem; }
+.transform-box {
+  background: var(--vp-c-bg);
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 6px;
+  padding: 0.75rem;
+}
+
+.transform-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.pill-type {
+  font-size: 0.6rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  background: var(--vp-c-brand-soft);
+  color: var(--vp-c-brand-1);
+  padding: 2px 6px;
+  border-radius: 10px;
+}
+
+.btn-row { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.5rem; }
 .add-btn, .small-add-btn {
   background: var(--vp-c-brand-soft);
   color: var(--vp-c-brand-1);
@@ -529,84 +560,19 @@ select, input:not([type="radio"]):not([type="checkbox"]) {
   cursor: pointer;
 }
 
-.small-add-btn { padding: 1px 6px; font-size: 0.65rem; }
+.del-btn { background: none; border: none; color: var(--vp-c-text-3); cursor: pointer; font-size: 1.1rem; }
+.del-btn:hover { color: var(--vp-c-danger-1); }
 
-.list { display: flex; flex-direction: column; gap: 0.5rem; }
-.transform-pill {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  background: var(--vp-c-bg);
-  border: 1px solid var(--vp-c-divider);
-  padding: 4px 8px;
-  border-radius: 6px;
-}
-
-.pill-type {
-  font-size: 0.6rem;
-  font-weight: 800;
-  text-transform: uppercase;
-  background: var(--vp-c-default-soft);
-  padding: 2px 4px;
-  border-radius: 3px;
-  min-width: 50px;
-  text-align: center;
-}
-
-.pill-content { flex: 1; }
-.inner-row { display: flex; align-items: center; gap: 0.5rem; }
-.inner-row input { flex: 1; min-width: 0; }
-
-.writer-header {
-  display: flex;
-  justify-content: space-between;
-  font-size: 0.7rem;
-  font-weight: bold;
-  color: var(--vp-c-text-2);
-  margin-bottom: 0.5rem;
-}
-
-.del-btn {
-  background: transparent;
-  color: var(--vp-c-text-3);
-  border: none;
-  font-size: 1.1rem;
-  cursor: pointer;
-}
-
-.preview {
-  background: #1e1e1e;
-  border-radius: 8px;
-  overflow: hidden;
-}
-
+.preview { background: #1e1e1e; border-radius: 8px; overflow: hidden; margin-top: 1rem; }
 .preview-header {
   padding: 0.5rem 1rem;
   background: #2d2d2d;
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  font-size: 0.8rem;
   color: #aaa;
+  font-size: 0.8rem;
 }
 
-.copy-btn {
-  background: #444;
-  color: white;
-  border: none;
-  padding: 2px 8px;
-  border-radius: 4px;
-  font-size: 0.7rem;
-  cursor: pointer;
-}
-
-pre {
-  margin: 0;
-  padding: 1rem;
-  color: #d4d4d4;
-  font-size: 0.85rem;
-  overflow-x: auto;
-}
-
+pre { margin: 0; padding: 1rem; color: #d4d4d4; font-size: 0.85rem; overflow-x: auto; }
 code { font-family: var(--vp-font-family-mono); }
 </style>
