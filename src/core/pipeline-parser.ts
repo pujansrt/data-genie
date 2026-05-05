@@ -1,26 +1,19 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { parse as parseYaml } from 'yaml';
-import { 
-  CSVReader, 
-  JsonReader, 
-  NDJsonReader, 
-  CSVWriter, 
-  JsonWriter, 
-  NDJsonWriter, 
-  ConsoleWriter,
-  Job,
-  DataReader,
-  DataWriter,
-  FilteringReader,
-  FilterExpression,
-  TransformingReader,
-  RenameField,
-  SelectFields,
-  RemoveFields,
-  BasicFieldTransformer,
-  PIIMaskingTransformer
-} from '../index';
+import { CSVReader } from '@/readers/csv-reader';
+import { JsonReader } from '@/readers/json-reader';
+import { NDJsonReader } from '@/readers/nd-json-reader';
+import { CSVWriter } from '@/writers/csv-writer';
+import { JsonWriter } from '@/writers/json-writer';
+import { NDJsonWriter } from '@/writers/nd-json-writer';
+import { ConsoleWriter } from '@/writers/console-writer';
+import { Job } from './job';
+import { DataReader, DataWriter } from './interfaces';
+import { FilteringReader } from '@/filters/filtering-reader';
+import { FilterExpression } from '@/filters/filter-expressions';
+import { TransformingReader } from '@/transformers/transforming-reader';
+import { RenameField, SelectFields, RemoveFields, BasicFieldTransformer, PIIMaskingTransformer } from '@/transformers/field-transformers';
 
 export interface ReaderConfig {
   type: 'csv' | 'json' | 'ndjson';

@@ -20,33 +20,11 @@ Visit our full documentation site for in-depth guides, API reference, and real-w
 ## Installation
 
 ```bash
-# Install as a library
 npm install @pujansrt/data-genie
-
-# OR install globally to use the CLI
-npm install -g @pujansrt/data-genie
 ```
 
-## Declarative Pipelines (CLI)
 
-Instead of writing code, you can define your ETL pipelines in YAML and run them using the `data-genie` CLI.
-
-```yaml
-# pipeline.yaml
-pipeline:
-  read: { type: csv, path: input.csv }
-  transform:
-    - { type: filter, expression: "age > 18" }
-    - { type: rename, mapping: { fname: firstName } }
-  write: { type: json, path: output.json }
-```
-
-Run it with:
-```bash
-data-genie run pipeline.yaml
-```
-
-## Quick Start (Programmatic)
+## Quick Start
 
 ![demo](./docs/demo.gif)
 
@@ -57,11 +35,8 @@ import { CSVReader, JsonWriter, Job } from '@pujansrt/data-genie';
 const reader = new CSVReader('users.csv');
 const writer = new JsonWriter('output.json');
 
-(async () => {
-    // Process 10GB+ files with just 15MB RAM
-    const metrics = await Job.run(reader, writer);
-    console.log(`Processed ${metrics.recordCount} records!`);
-})();
+const metrics = await Job.run(reader, writer);
+console.log(`Processed ${metrics.recordCount} records!`);
 ```
 
 ### Preview (Dry Run)

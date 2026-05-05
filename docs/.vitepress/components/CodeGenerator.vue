@@ -26,6 +26,16 @@ const writers = ref([
   }
 ])
 
+// DLQ Configuration
+const useDLQ = ref(false)
+const dlqWriter = ref({
+  type: 'JsonWriter',
+  sink: 'file',
+  path: 'errors.json',
+  bucket: 'my-dlq-bucket',
+  key: 'errors/failed_records.json'
+})
+
 const addWriter = () => {
   writers.value.push({ 
     type: 'CSVWriter', 
@@ -59,6 +69,7 @@ const addTransform = (type) => {
 const removeTransform = (index) => transforms.value.splice(index, 1)
 
 const isFileSink = (type) => !['MemoryWriter', 'ConsoleWriter', 'CallbackWriter', 'SqlWriter'].includes(type)
+const supportsDLQ = (type) => ['CSVReader', 'JsonReader', 'NDJsonReader', 'XMLReader', 'ValidatingReader', 'SchemaValidatingReader'].includes(type)
 
 const generatedCode = computed(() => {
   const imports = new Set(['Job'])
@@ -71,14 +82,17 @@ const generatedCode = computed(() => {
   
   activeWriters.forEach(w => imports.add(w.type))
   
-  if (readerSource.value === 's3' || activeWriters.some(w => w.sink === 's3' && isFileSink(w.type))) {
+  if (useDLQ.value) imports.add(dlqWriter.value.type)
+
+  if (readerSource.value === 's3' || activeWriters.some(w => w.sink === 's3' && isFileSink(w.type)) || (useDLQ.value && dlqWriter.value.sink === 's3')) {
     imports.add('S3Source')
-    if (activeWriters.some(w => w.sink === 's3' && isFileSink(w.type))) imports.add('S3Sink')
+    if (activeWriters.some(w => w.sink === 's3' && isFileSink(w.type)) || (useDLQ.value && dlqWriter.value.sink === 's3')) imports.add('S3Sink')
   }
 
   if (useValidation.value) imports.add('ValidatingReader')
   
-  if (transforms.value.some(t => ['rename', 'calculate', 'mask', 'remove'].includes(t.type))) imports.add('TransformingReader')
+  const hasStructural = transforms.value.some(t => ['rename', 'calculate', 'mask', 'remove'].includes(t.type))
+  if (hasStructural) imports.add('TransformingReader')
   if (transforms.value.some(t => t.type === 'rename')) imports.add('RenameField')
   if (transforms.value.some(t => t.type === 'calculate')) imports.add('SetCalculatedField')
   if (transforms.value.some(t => t.type === 'filter')) imports.add('FilteringReader', 'FilterExpression')
@@ -87,12 +101,12 @@ const generatedCode = computed(() => {
 
   let code = `import { ${Array.from(imports).sort().join(', ')} } from '@pujansrt/data-genie';\n`
   if (useValidation.value) code += `import { z } from 'zod';\n`
-  if (readerSource.value === 's3' || activeWriters.some(w => w.sink === 's3' && isFileSink(w.type))) {
+  if (readerSource.value === 's3' || activeWriters.some(w => w.sink === 's3' && isFileSink(w.type)) || (useDLQ.value && dlqWriter.value.sink === 's3')) {
     code += `import { S3Client } from '@aws-sdk/client-s3';\n`
   }
   code += `\n`
 
-  if (readerSource.value === 's3' || activeWriters.some(w => w.sink === 's3' && isFileSink(w.type))) {
+  if (readerSource.value === 's3' || activeWriters.some(w => w.sink === 's3' && isFileSink(w.type)) || (useDLQ.value && dlqWriter.value.sink === 's3')) {
     code += `const s3Client = new S3Client({ region: 'us-east-1' });\n\n`
   }
 
@@ -118,20 +132,17 @@ const generatedCode = computed(() => {
     currentVar = 'validated'
   }
 
-  // Optimized transformation grouping
-  let groupType = null; // 'transforming', 'filtering', or null
-
+  // Apply transforms
+  let groupType = null;
   transforms.value.forEach((t, i) => {
     const isStructural = ['rename', 'calculate', 'mask', 'remove'].includes(t.type);
     const isFiltering = t.type === 'filter';
-
     if (isStructural) {
       if (groupType !== 'transforming') {
         if (groupType !== null) code += ';\n';
         code += `const transformed = new TransformingReader(${currentVar})\n`;
         groupType = 'transforming';
       }
-      
       if (t.type === 'rename') code += `  .add(new RenameField('${t.old}', '${t.new}').transform())\n`
       if (t.type === 'calculate') code += `  .add(new SetCalculatedField('${t.field}', '${t.expr}').transform())\n`
       if (t.type === 'mask') code += `  .add(new PIIMaskingTransformer().mask('${t.field}', '${t.strategy}').transform())\n`
@@ -155,8 +166,18 @@ const generatedCode = computed(() => {
       groupType = null;
     }
   });
-
   if (groupType !== null) code += ';\n';
+
+  // DLQ Setup
+  if (useDLQ.value) {
+    let dlqCode = ''
+    if (dlqWriter.value.sink === 's3') {
+      dlqCode = `new ${dlqWriter.value.type}(new S3Sink(s3Client, '${dlqWriter.value.bucket}', '${dlqWriter.value.key}'))`
+    } else {
+      dlqCode = `new ${dlqWriter.value.type}('${dlqWriter.value.path}')`
+    }
+    code += `\n${currentVar}.setDLQ(${dlqCode});\n`
+  }
 
   // Writers Setup
   const writerCodes = activeWriters.map(w => {
@@ -190,9 +211,7 @@ const generatedCode = computed(() => {
   code += `async function run() {\n`
   if (showEvents.value || useEventEmitter.value) {
     code += `  const job = new Job(${currentVar}, writer);\n`
-    if (showEvents.value) {
-      code += `  job.on('progress', (m) => console.log(\`Processed \${m.recordCount} records...\`));\n`
-    }
+    if (showEvents.value) code += `  job.on('progress', (m) => console.log(\`Processed \${m.recordCount} records...\`));\n`
     if (useEventEmitter.value) {
       code += `  job.on('start', () => console.log('Job started'));\n`
       code += `  job.on('end', (metrics) => console.log('Job ended', metrics));\n`
@@ -211,35 +230,20 @@ const generatedCode = computed(() => {
 
 const highlightedCode = computed(() => {
   let code = generatedCode.value;
-  // Escape HTML first to prevent injection but we will replace tokens with real tags
   code = code.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-  
-  // Highlighting: Use a temporary marker to avoid double-processing
   const tokens = [];
   let i = 0;
-
   const addToken = (str, cls) => {
     const id = `__TOKEN_${i++}__`;
     tokens.push({ id, html: `<span class="${cls}">${str}</span>` });
     return id;
   };
-
-  // Strings
   code = code.replace(/('.*?'|".*?"|`.*?`)/g, (m) => addToken(m, 'token-string'));
-  // Comments
   code = code.replace(/\/\/.*/g, (m) => addToken(m, 'token-comment'));
-  // Keywords
   code = code.replace(/\b(import|from|const|let|async|function|await|new|return|if|else|try|catch)\b/g, (m) => addToken(m, 'token-keyword'));
-  // Classes/Types
   code = code.replace(/\b(Job|CSVReader|JsonReader|NDJsonReader|ParquetReader|XMLReader|XlsxReader|FixedWidthReader|MemoryReader|SqlReader|HttpReader|JsonWriter|CSVWriter|NDJsonWriter|ParquetWriter|XMLWriter|SqlWriter|ConsoleWriter|MemoryWriter|CallbackWriter|ParallelWriter|MultiWriter|TransformingReader|FilteringReader|ValidatingReader|RenameField|SetCalculatedField|FilterExpression|PIIMaskingTransformer|RemoveFields|S3Source|S3Sink|S3Client)\b/g, (m) => addToken(m, 'token-class'));
-  // Numbers
   code = code.replace(/\b(\d+)\b/g, (m) => addToken(m, 'token-number'));
-
-  // Put tokens back
-  tokens.forEach(t => {
-    code = code.replace(t.id, t.html);
-  });
-  
+  tokens.forEach(t => { code = code.replace(t.id, t.html); });
   return code;
 });
 
@@ -288,7 +292,6 @@ const copyToClipboard = () => {
             </div>
           </div>
           
-          <!-- Path Inputs -->
           <div v-if="readerSource === 'file' && !['MemoryReader', 'SqlReader', 'HttpReader'].includes(readerType)" class="input-stack">
             <div class="sub-label">File Path</div>
             <input v-model="readerPath" />
@@ -473,6 +476,44 @@ const copyToClipboard = () => {
         </div>
       </section>
 
+      <!-- Advanced Features Card -->
+      <section class="card">
+        <div class="label">🛠️ Advanced Resilience</div>
+        
+        <div class="toggle-row">
+          <label class="checkbox-label">
+            <input type="checkbox" v-model="useDLQ" /> Enable Dead Letter Queue (DLQ)
+          </label>
+        </div>
+
+        <div v-if="useDLQ" class="card-nested mt-2">
+          <div class="sub-label">DLQ Destination</div>
+          <div class="segmented-control small">
+            <label :class="{ active: dlqWriter.sink === 'file' }">
+              <input type="radio" v-model="dlqWriter.sink" value="file" /> File
+            </label>
+            <label :class="{ active: dlqWriter.sink === 's3' }">
+              <input type="radio" v-model="dlqWriter.sink" value="s3" /> S3
+            </label>
+          </div>
+
+          <div v-if="dlqWriter.sink === 'file'" class="input-stack mb-2">
+            <input v-model="dlqWriter.path" placeholder="Path (e.g. errors.json)" />
+          </div>
+          <div v-if="dlqWriter.sink === 's3'" class="input-stack mb-2">
+            <input v-model="dlqWriter.bucket" placeholder="Bucket" />
+            <input v-model="dlqWriter.key" placeholder="Key" class="mt-1" />
+          </div>
+
+          <div class="sub-label">DLQ Format</div>
+          <select v-model="dlqWriter.type">
+            <option value="JsonWriter">JSON Writer</option>
+            <option value="CSVWriter">CSV Writer</option>
+            <option value="NDJsonWriter">NDJSON Writer</option>
+          </select>
+        </div>
+      </section>
+
       <!-- Options Card -->
       <section class="card">
         <div class="label">⚙️ Job Options</div>
@@ -567,6 +608,9 @@ const copyToClipboard = () => {
   cursor: pointer;
   border-radius: 4px;
   color: var(--vp-c-text-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .segmented-control input { display: none; }
@@ -575,6 +619,8 @@ const copyToClipboard = () => {
   color: var(--vp-c-brand-1);
   font-weight: bold;
 }
+
+.segmented-control.small label { padding: 2px; font-size: 0.7rem; }
 
 .checkbox-label {
   display: flex;
@@ -655,6 +701,11 @@ select, input:not([type="radio"]):not([type="checkbox"]), .code-textarea {
   color: #aaa;
   font-size: 0.8rem;
 }
+
+.mb-1 { margin-bottom: 0.25rem; }
+.mb-2 { margin-bottom: 0.5rem; }
+.mt-1 { margin-top: 0.25rem; }
+.mt-2 { margin-top: 0.5rem; }
 
 pre { margin: 0; padding: 1rem; color: #d4d4d4; font-size: 0.85rem; overflow-x: auto; }
 code { font-family: var(--vp-font-family-mono); }
