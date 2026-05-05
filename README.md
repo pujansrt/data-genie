@@ -22,6 +22,7 @@ Visit our full documentation site for in-depth guides, API reference, and real-w
 ```bash
 npm install @pujansrt/data-genie
 ```
+> **Note:** `zod`, `@aws-sdk/client-s3`, and `exceljs` are optional peer dependencies in case you need them.
 
 
 ## Quick Start
