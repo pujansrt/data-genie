@@ -3,20 +3,38 @@ import { DataWriter, DataRecord, DataSink } from '@/core/interfaces';
 import { Writable } from 'stream';
 import { ensureDataSink } from '@/core/transport-utils';
 
+export interface CSVWriterOptions {
+  delimiter?: string;
+  hasFieldNamesInFirstRow?: boolean;
+}
+
 export class CSVWriter<T = DataRecord> implements DataWriter<T> {
   private sink: DataSink;
   private fieldNames: string[] = [];
   private headerWritten: boolean = false;
+  private fieldSeparator: string = ',';
   private stringifier: Stringifier;
   private outputStream?: Writable;
 
-  constructor(sink: string | DataSink) {
+  constructor(sink: string | DataSink, options?: string | CSVWriterOptions) {
     this.sink = ensureDataSink(sink);
-    this.stringifier = stringify();
+    if (typeof options === 'string') {
+      this.fieldSeparator = options;
+    } else if (options) {
+      if (options.delimiter !== undefined) this.fieldSeparator = options.delimiter;
+      if (options.hasFieldNamesInFirstRow !== undefined) this.headerWritten = !options.hasFieldNamesInFirstRow;
+    }
+    this.stringifier = stringify({ delimiter: this.fieldSeparator });
   }
 
   public setFieldNamesInFirstRow(value: boolean): this {
     this.headerWritten = !value;
+    return this;
+  }
+
+  public setFieldSeparator(separator: string): this {
+    this.fieldSeparator = separator;
+    this.stringifier = stringify({ delimiter: this.fieldSeparator });
     return this;
   }
 

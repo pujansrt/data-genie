@@ -11,6 +11,7 @@ export { ParquetReader } from './readers/parquet-reader';
 export { XMLReader } from './readers/xml-reader';
 
 export { CSVWriter } from './writers/csv-writer';
+export type { CSVWriterOptions } from './writers/csv-writer';
 export { ConsoleWriter } from './writers/console-writer';
 export { JsonWriter } from './writers/json-writer';
 export { FixedWidthWriter } from './writers/fixed-width-writer';

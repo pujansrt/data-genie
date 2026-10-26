@@ -27,4 +27,28 @@ describe('CSV Handler', () => {
     expect(outputContent).toContain('1,Alice');
     expect(outputContent).toContain('2,Bob');
   });
+
+  it('should write CSV files with a custom delimiter passed as string in constructor', async () => {
+    const reader = new CSVReader(testInputFile).setFieldNamesInFirstRow(true);
+    const writer = new CSVWriter(testOutputFile, ';');
+
+    await Job.run(reader, writer);
+
+    const outputContent = fs.readFileSync(testOutputFile, 'utf8');
+    expect(outputContent).toContain('id;name');
+    expect(outputContent).toContain('1;Alice');
+    expect(outputContent).toContain('2;Bob');
+  });
+
+  it('should write CSV files with a custom delimiter passed via options object in constructor', async () => {
+    const reader = new CSVReader(testInputFile).setFieldNamesInFirstRow(true);
+    const writer = new CSVWriter(testOutputFile, { delimiter: '|' });
+
+    await Job.run(reader, writer);
+
+    const outputContent = fs.readFileSync(testOutputFile, 'utf8');
+    expect(outputContent).toContain('id|name');
+    expect(outputContent).toContain('1|Alice');
+    expect(outputContent).toContain('2|Bob');
+  });
 });

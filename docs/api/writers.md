@@ -4,7 +4,10 @@ Writers persist processed records to a destination.
 
 ## `CSVWriter<T>`
 Writes data as CSV.
-- **Constructor**: `new CSVWriter(sink)`
+- **Constructor**: `new CSVWriter(sink, options?)`
+- **Methods**:
+    - `setFieldNamesInFirstRow(boolean)`
+    - `setFieldSeparator(string)`
 
 ## `JsonWriter<T>`
 Writes data as a JSON array.

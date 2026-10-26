@@ -172,7 +172,7 @@ export class PipelineParser {
         return new ConsoleWriter();
       case 'csv':
         if (!config.path) throw new Error('CSV writer requires a "path"');
-        return new CSVWriter(path.resolve(process.cwd(), config.path));
+        return new CSVWriter(path.resolve(process.cwd(), config.path), config.options);
       case 'json':
         if (!config.path) throw new Error('JSON writer requires a "path"');
         return new JsonWriter(path.resolve(process.cwd(), config.path));

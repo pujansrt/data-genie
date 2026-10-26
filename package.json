@@ -1,6 +1,6 @@
 {
   "name": "@pujansrt/data-genie",
-  "version": "2.1.7",
+  "version": "2.1.8",
   "homepage": "https://pujansrt.github.io/data-genie/",
   "keywords": [
     "typescript",
@@ -46,25 +46,25 @@
   },
   "author": "Pujan Srivastava",
   "devDependencies": {
-    "@aws-sdk/client-s3": "^3.1037.0",
-    "@aws-sdk/lib-storage": "^3.1037.0",
+    "@aws-sdk/client-s3": "^3.1156.0",
+    "@aws-sdk/lib-storage": "^3.1156.0",
     "@types/jest": "^30.0.0",
-    "eslint": "^9.30.0",
-    "eslint-config-prettier": "^10.1.5",
-    "eslint-plugin-prettier": "^5.5.1",
+    "eslint": "^10.13.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.7",
     "exceljs": "^4.4.0",
-    "jest": "^30.0.3",
+    "jest": "^30.5.2",
     "jest-coverage-badges": "^1.1.2",
-    "mermaid": "^11.14.0",
+    "mermaid": "^12.2.0",
     "parquetjs-lite": "^0.8.7",
-    "prettier": "^3.6.2",
-    "ts-jest": "^29.4.0",
-    "tsc-alias": "^1.8.16",
-    "tsup": "^8.5.0",
-    "tsx": "^4.21.0",
+    "prettier": "^3.9.10",
+    "ts-jest": "^29.4.15",
+    "tsc-alias": "^1.9.9",
+    "tsup": "^9.0.0",
+    "tsx": "^4.23.15",
     "vitepress": "^1.6.4",
     "vitepress-plugin-mermaid": "^2.0.17",
-    "zod": "^4.3.6"
+    "zod": "^4.6.7"
   },
   "jest": {
     "preset": "ts-jest",
@@ -97,9 +97,9 @@
     "LICENSE"
   ],
   "dependencies": {
-    "csv-parse": "^5.6.0",
-    "csv-stringify": "^6.5.2",
-    "yaml": "^2.8.3"
+    "csv-parse": "^7.0.3",
+    "csv-stringify": "^6.9.0",
+    "yaml": "^2.9.1"
   },
   "peerDependencies": {
     "@aws-sdk/client-s3": "^3.0.0",

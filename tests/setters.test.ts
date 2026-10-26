@@ -33,6 +33,7 @@ describe('Readers and Writers Setters', () => {
   it('should test CSVWriter setters', () => {
     const writer = new CSVWriter('tests/test.csv');
     expect(writer.setFieldNamesInFirstRow(true)).toBe(writer);
+    expect(writer.setFieldSeparator(';')).toBe(writer);
   });
 
   it('should test FixedWidthWriter setters', () => {
