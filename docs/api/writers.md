@@ -4,7 +4,8 @@ Writers persist processed records to a destination.
 
 ## `CSVWriter<T>`
 Writes data as CSV.
-- **Constructor**: `new CSVWriter(sink)`
+- **Constructor**: `new CSVWriter(sink, options?)`
+- **Options**: `delimiter?: string` — field delimiter (defaults to `','`). For example, `new CSVWriter('output.csv', { delimiter: ';' })` or `new CSVWriter('output.tsv', { delimiter: '\t' })`. Fields containing the delimiter, quotes, or newlines are escaped automatically.
 
 ## `JsonWriter<T>`
 Writes data as a JSON array.

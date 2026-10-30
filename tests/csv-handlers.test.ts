@@ -19,12 +19,28 @@ describe('CSV Handler', () => {
 
   it('should read and write CSV files correctly', async () => {
     const reader = new CSVReader(testInputFile).setFieldNamesInFirstRow(true);
-    const writer = new CSVWriter(testOutputFile);
+    const writer = new CSVWriter(testOutputFile, { delimiter: ',' });
 
     await Job.run(reader, writer);
 
     const outputContent = fs.readFileSync(testOutputFile, 'utf8');
     expect(outputContent).toContain('1,Alice');
     expect(outputContent).toContain('2,Bob');
+  });
+
+  it.each([';', '\t', '|', '||'])('should write and escape records with delimiter %j', async (delimiter) => {
+    const writer = new CSVWriter(testOutputFile, { delimiter });
+    const record = { id: '1', name: `Alice${delimiter}Bob`, note: 'a "quote"\nand a comma,' };
+
+    await writer.write(record);
+    await writer.close();
+
+    const outputContent = fs.readFileSync(testOutputFile, 'utf8');
+    expect(outputContent).toBe(`id${delimiter}name${delimiter}note\n1${delimiter}"Alice${delimiter}Bob"${delimiter}"a ""quote""\nand a comma,"\n`);
+    const records = [];
+    for await (const result of new CSVReader(testOutputFile, { delimiter }).read()) {
+      records.push(result);
+    }
+    expect(records).toEqual([record]);
   });
 });

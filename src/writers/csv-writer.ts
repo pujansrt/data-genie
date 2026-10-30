@@ -3,6 +3,11 @@ import { DataWriter, DataRecord, DataSink } from '@/core/interfaces';
 import { Writable } from 'stream';
 import { ensureDataSink } from '@/core/transport-utils';
 
+export interface CSVWriterOptions {
+  /** Field delimiter. Defaults to a comma. */
+  delimiter?: string;
+}
+
 export class CSVWriter<T = DataRecord> implements DataWriter<T> {
   private sink: DataSink;
   private fieldNames: string[] = [];
@@ -10,9 +15,9 @@ export class CSVWriter<T = DataRecord> implements DataWriter<T> {
   private stringifier: Stringifier;
   private outputStream?: Writable;
 
-  constructor(sink: string | DataSink) {
+  constructor(sink: string | DataSink, options: CSVWriterOptions = {}) {
     this.sink = ensureDataSink(sink);
-    this.stringifier = stringify();
+    this.stringifier = stringify({ delimiter: options.delimiter });
   }
 
   public setFieldNamesInFirstRow(value: boolean): this {
